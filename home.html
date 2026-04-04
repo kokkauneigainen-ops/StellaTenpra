@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>国家運営ポータル</title>
+<style>
+/* ════════════════════════════════════════════════════
+   リセット & CSS変数
+════════════════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;
+  --s1:#0d1220cc;--s2:#121a2ccc;--s3:#192236;
+  --s1s:#0d1220;--s2s:#121a2c;
+  --bd:#1e2d45;--bd2:#152035;
+  --t1:#c8d8f0;--t2:#607898;--t3:#2e4260;
+  --ac:#3b82f6;--ag:#10b981;--ar:#ef4444;--ay:#f59e0b;
+  --r:12px;--rl:18px;
+  /* ユーザーアクセントカラー（ログイン後にJSで上書き） */
+  --uc:#3b82f6;--uc2:#1d4ed8;
+}
+html,body{height:100%;overflow-x:hidden}
+body{
+  background:var(--bg);color:var(--t1);
+  font-family:'Hiragino Kaku Gothic ProN','Noto Sans JP','Courier New',monospace;
+  font-size:14px;min-height:100vh;
+}
+
+/* ════════════════════════════════════════════════════
+   背景
+════════════════════════════════════════════════════ */
+#BG{
+  position:fixed;inset:0;z-index:0;
+  background:url('home.jpg') center/cover no-repeat;
+}
+#BG::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(4,7,14,.82) 0%,rgba(4,7,14,.68) 40%,rgba(4,7,14,.88) 100%);
+}
+
+/* ════════════════════════════════════════════════════
+   ローディング / トースト
+════════════════════════════════════════════════════ */
+.lov{display:none;position:fixed;inset:0;background:rgba(3,6,12,.88);z-index:2000;
+  flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.lov.on{display:flex}
+.spin{width:44px;height:44px;border:3px solid #1e2d45;border-top-color:var(--uc);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ltxt{color:var(--t2);font-size:11px;letter-spacing:2px}
+.toast{
+  position:fixed;bottom:24px;left:50%;
+  transform:translateX(-50%) translateY(20px);
+  background:#0d1220ee;color:var(--t1);
+  padding:11px 22px;border-radius:24px;border:1px solid var(--bd);
+  font-size:13px;letter-spacing:.4px;z-index:3000;
+  opacity:0;transition:all .32s cubic-bezier(.22,1,.36,1);
+  pointer-events:none;white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.ok{border-color:var(--ag);color:var(--ag)}
+.toast.er{border-color:var(--ar);color:var(--ar)}
+.toast.wa{border-color:var(--ay);color:var(--ay)}
+
+/* ════════════════════════════════════════════════════
+   ログイン画面
+════════════════════════════════════════════════════ */
+#LOGIN_SCREEN{
+  position:fixed;inset:0;z-index:1500;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:20px;
+  background:radial-gradient(ellipse at 50% 35%,rgba(10,18,42,.6) 0%,rgba(4,7,14,.5) 100%);
+  backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);
+}
+
+.login-logo{
+  font-size:60px;margin-bottom:12px;
+  animation:logo-float 3.5s ease-in-out infinite;
+  filter:drop-shadow(0 0 28px rgba(59,130,246,.55));
+}
+@keyframes logo-float{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-10px) rotate(2deg)}}
+
+.login-nation{font-size:10px;color:var(--t2);letter-spacing:4px;text-transform:uppercase;margin-bottom:6px}
+.login-title{font-size:26px;font-weight:900;color:#fff;letter-spacing:1px;margin-bottom:32px;
+  text-shadow:0 2px 20px rgba(59,130,246,.5)}
+
+.login-card{
+  background:rgba(10,16,32,.88);
+  border:1px solid rgba(59,130,246,.22);
+  border-radius:var(--rl);
+  padding:28px 24px 24px;
+  width:min(380px,100%);
+  box-shadow:0 0 80px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+}
+
+.lbl{display:block;font-size:10px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin-bottom:7px}
+
+/* 国家セレクト */
+.lcnt-wrap{position:relative;margin-bottom:16px}
+.lcnt-sel{
+  width:100%;background:rgba(18,26,44,.9);
+  border:1px solid var(--bd);color:var(--t1);
+  padding:13px 40px 13px 14px;border-radius:var(--r);
+  font-family:inherit;font-size:14px;outline:none;
+  appearance:none;-webkit-appearance:none;cursor:pointer;
+  transition:border-color .2s;
+}
+.lcnt-sel:focus{border-color:var(--uc);box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+.lcnt-arr{position:absolute;right:13px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--t3)}
+
+/* パスワード入力 */
+.lpw-wrap{
+  display:flex;align-items:center;
+  background:rgba(18,26,44,.9);border:1px solid var(--bd);
+  border-radius:var(--r);margin-bottom:8px;
+  overflow:hidden;transition:border-color .2s,box-shadow .2s;
+}
+.lpw-wrap:focus-within{border-color:var(--uc);box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+.lpw-wrap.err{border-color:var(--ar);box-shadow:0 0 0 3px rgba(239,68,68,.12);animation:shake .35s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+#LPW{
+  flex:1;background:none;border:none;color:var(--t1);
+  font-family:inherit;font-size:15px;letter-spacing:3px;
+  padding:13px 14px;outline:none;
+}
+#LPW::placeholder{font-size:13px;letter-spacing:.5px;color:var(--t3)}
+.leye{background:none;border:none;color:var(--t2);padding:0 14px;cursor:pointer;font-size:17px;flex-shrink:0}
+
+.lerr{color:var(--ar);font-size:11px;text-align:center;letter-spacing:.5px;margin-bottom:10px;min-height:16px}
+
+.lbtn{
+  width:100%;padding:15px;
+  background:linear-gradient(135deg,var(--uc),var(--uc2));
+  border:none;border-radius:var(--r);color:#fff;
+  font-family:inherit;font-size:14px;font-weight:700;
+  letter-spacing:2px;cursor:pointer;
+  box-shadow:0 6px 24px rgba(59,130,246,.38);
+  transition:all .2s;
+}
+.lbtn:active{transform:scale(.98);box-shadow:0 3px 12px rgba(59,130,246,.2)}
+.lbtn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.lhint{text-align:center;font-size:11px;color:var(--t3);margin-top:14px;letter-spacing:.5px}
+
+/* GAS URL バナー */
+#CONFIG_BANNER{
+  display:none;
+  background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(239,68,68,.1));
+  border:1px solid rgba(245,158,11,.4);
+  border-radius:var(--r);padding:10px 14px;margin-bottom:16px;
+  align-items:center;gap:8px;font-size:11px;color:#f59e0b;
+}
+#CONFIG_BANNER input{
+  flex:1;background:rgba(0,0,0,.4);border:1px solid rgba(245,158,11,.4);
+  color:#fde68a;font-family:inherit;font-size:11px;
+  padding:6px 10px;border-radius:6px;outline:none;min-width:0;
+}
+#CONFIG_BANNER button{
+  background:rgba(245,158,11,.25);border:1px solid rgba(245,158,11,.5);
+  color:#f59e0b;font-family:inherit;font-size:10px;
+  padding:6px 10px;border-radius:6px;cursor:pointer;
+  letter-spacing:.5px;white-space:nowrap;flex-shrink:0;
+}
+
+/* ════════════════════════════════════════════════════
+   ホーム本体（ログイン後）
+════════════════════════════════════════════════════ */
+#HOME{display:none;position:relative;z-index:1;min-height:100vh;padding-bottom:32px}
+
+/* ─── ヘッダー ─── */
+.hdr{
+  position:sticky;top:0;z-index:300;
+  background:rgba(7,9,15,.82);
+  border-bottom:1px solid rgba(255,255,255,.06);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  padding:0 14px;
+  display:flex;align-items:center;justify-content:space-between;
+  height:56px;
+  box-shadow:0 2px 24px rgba(0,0,0,.4);
+}
+.hdr-left{display:flex;align-items:center;gap:10px}
+.hdr-flag{
+  width:10px;height:36px;border-radius:3px;
+  background:var(--uc);
+  box-shadow:0 0 14px var(--uc);
+  flex-shrink:0;
+  transition:background .5s,box-shadow .5s;
+}
+.hdr-texts{}
+.hdr-label{font-size:9px;color:var(--t3);letter-spacing:2px;text-transform:uppercase}
+.hdr-nation{font-size:17px;font-weight:900;color:#fff;letter-spacing:.5px;line-height:1.2}
+
+.hdr-right{display:flex;align-items:center;gap:8px}
+.hdr-btn{
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.1);
+  color:var(--t1);border-radius:8px;
+  padding:7px 14px;font-family:inherit;font-size:12px;
+  cursor:pointer;letter-spacing:.5px;transition:all .2s;
+  display:flex;align-items:center;gap:5px;
+}
+.hdr-btn:active{background:rgba(255,255,255,.1)}
+
+/* ─── ヒーローエリア ─── */
+.hero{
+  padding:28px 16px 18px;
+  text-align:center;
+}
+.hero-welcome{font-size:11px;color:var(--t2);letter-spacing:3px;text-transform:uppercase;margin-bottom:6px}
+.hero-name{
+  font-size:28px;font-weight:900;color:#fff;
+  text-shadow:0 2px 24px rgba(0,0,0,.7);
+  letter-spacing:.5px;margin-bottom:4px;
+}
+.hero-sub{font-size:12px;color:var(--t2);letter-spacing:.5px}
+
+/* ─── セクションタイトル ─── */
+.sec-title{
+  display:flex;align-items:center;gap:10px;
+  padding:0 16px;margin-bottom:12px;
+  font-size:10px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;
+}
+.sec-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(30,45,69,.8),transparent)}
+
+/* ─── ナビグリッド ─── */
+.nav-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:10px;
+  padding:0 14px;
+  margin-bottom:28px;
+}
+
+.nav-btn{
+  background:rgba(13,18,32,.8);
+  border:1px solid rgba(30,45,69,.9);
+  border-radius:var(--r);
+  padding:18px 14px 16px;
+  cursor:pointer;
+  transition:all .22s;
+  display:flex;flex-direction:column;align-items:flex-start;gap:8px;
+  position:relative;overflow:hidden;
+  text-decoration:none;color:inherit;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  -webkit-tap-highlight-color:transparent;
+}
+.nav-btn::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,.03),transparent 60%);
+  pointer-events:none;
+}
+.nav-btn::after{
+  content:'';position:absolute;
+  top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--uc),transparent);
+  opacity:0;transition:opacity .2s;
+}
+.nav-btn:hover::after,.nav-btn:active::after{opacity:1}
+.nav-btn:hover,.nav-btn:active{
+  border-color:rgba(var(--uc-rgb,59,130,246),.4);
+  background:rgba(13,18,32,.92);
+  transform:translateY(-2px);
+  box-shadow:0 8px 28px rgba(0,0,0,.45);
+}
+
+.nav-icon{font-size:26px;line-height:1}
+.nav-label{font-size:13px;font-weight:700;color:var(--t1);letter-spacing:.3px;line-height:1.3}
+.nav-sub{font-size:10px;color:var(--t3);letter-spacing:.3px}
+.nav-arr{position:absolute;bottom:12px;right:14px;color:var(--t3);font-size:12px}
+
+/* 無効ボタン（選挙） */
+.nav-btn.disabled{
+  opacity:.38;cursor:not-allowed;
+  background:rgba(10,14,24,.7)!important;
+  border-color:rgba(30,45,69,.5)!important;
+  transform:none!important;box-shadow:none!important;
+}
+.nav-btn.disabled::after{display:none}
+.nav-btn.disabled .nav-label{text-decoration:line-through;color:var(--t3)}
+
+/* ─── 掲示板 ─── */
+.bbs-wrap{padding:0 14px;margin-bottom:24px}
+
+.bbs-card{
+  background:rgba(10,16,32,.82);
+  border:1px solid rgba(30,45,69,.8);
+  border-radius:var(--rl);
+  overflow:hidden;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+}
+
+.bbs-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px;border-bottom:1px solid rgba(30,45,69,.6);
+}
+.bbs-head-l{display:flex;align-items:center;gap:8px}
+.bbs-icon{font-size:18px}
+.bbs-htitle{font-size:13px;font-weight:700;color:var(--t1);letter-spacing:.5px}
+.bbs-count{font-size:10px;color:var(--t3);background:rgba(30,45,69,.8);padding:2px 8px;border-radius:10px;border:1px solid var(--bd2)}
+.bbs-refresh{background:none;border:none;color:var(--t2);font-size:18px;cursor:pointer;padding:4px;transition:transform .4s}
+.bbs-refresh:active{transform:rotate(180deg)}
+
+/* 投稿フォーム */
+.bbs-form{padding:12px 14px;border-bottom:1px solid rgba(30,45,69,.5)}
+.bbs-input-wrap{
+  display:flex;align-items:flex-end;gap:8px;
+}
+.bbs-textarea{
+  flex:1;background:rgba(18,26,44,.8);border:1px solid var(--bd);
+  color:var(--t1);font-family:inherit;font-size:13px;
+  padding:10px 12px;border-radius:10px;outline:none;resize:none;
+  min-height:44px;max-height:120px;
+  transition:border-color .2s;line-height:1.5;
+}
+.bbs-textarea:focus{border-color:var(--uc);box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+.bbs-textarea::placeholder{color:var(--t3)}
+.bbs-post-btn{
+  background:linear-gradient(135deg,var(--uc),var(--uc2));
+  border:none;border-radius:10px;color:#fff;
+  padding:10px 16px;font-family:inherit;font-size:12px;font-weight:700;
+  cursor:pointer;letter-spacing:.5px;flex-shrink:0;
+  box-shadow:0 4px 14px rgba(59,130,246,.3);transition:all .2s;
+  white-space:nowrap;
+}
+.bbs-post-btn:active{transform:scale(.97)}
+.bbs-post-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.bbs-char{font-size:10px;color:var(--t3);text-align:right;padding:4px 2px 0}
+
+/* メッセージリスト */
+.bbs-msgs{max-height:420px;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--bd) transparent}
+.bbs-msgs::-webkit-scrollbar{width:3px}
+.bbs-msgs::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px}
+
+.bbs-empty{text-align:center;padding:36px 20px;color:var(--t3);font-size:12px;letter-spacing:1px}
+
+.msg-item{
+  padding:12px 14px;
+  border-bottom:1px solid rgba(20,32,52,.7);
+  transition:background .15s;
+  position:relative;
+}
+.msg-item:last-child{border-bottom:none}
+.msg-item:hover{background:rgba(30,45,69,.15)}
+
+.msg-header{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.msg-flag{width:8px;height:16px;border-radius:2px;flex-shrink:0;transition:background .3s}
+.msg-author{font-size:11px;font-weight:700;color:var(--t1);letter-spacing:.3px}
+.msg-admin-badge{
+  font-size:9px;background:linear-gradient(135deg,#7c3aed,#a855f7);
+  color:#fff;padding:1px 7px;border-radius:10px;letter-spacing:.5px;
+}
+.msg-time{font-size:10px;color:var(--t3);margin-left:auto;flex-shrink:0}
+.msg-text{font-size:13px;color:var(--t1);line-height:1.65;white-space:pre-wrap;word-break:break-all}
+.msg-del{
+  position:absolute;top:10px;right:10px;
+  background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);
+  color:rgba(239,68,68,.6);border-radius:6px;
+  font-size:10px;padding:2px 7px;cursor:pointer;
+  font-family:inherit;display:none;transition:all .2s;
+}
+.msg-del:hover{background:rgba(239,68,68,.22);color:var(--ar)}
+
+/* ════════════════════════════════════════════════════
+   設定モーダル
+════════════════════════════════════════════════════ */
+.mover{
+  display:none;position:fixed;inset:0;
+  background:rgba(3,6,12,.88);z-index:800;
+  align-items:flex-end;justify-content:center;
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+}
+.mover.on{display:flex}
+.modal{
+  background:var(--s1s);border:1px solid var(--bd);
+  border-radius:var(--rl) var(--rl) 0 0;
+  width:100%;max-width:520px;max-height:88vh;
+  overflow:hidden;display:flex;flex-direction:column;
+  box-shadow:0 -8px 48px rgba(0,0,0,.7);
+  animation:sup .28s cubic-bezier(.22,1,.36,1);
+}
+@keyframes sup{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-handle{display:flex;justify-content:center;padding:10px 0 4px}
+.modal-handle-bar{width:36px;height:4px;background:var(--bd);border-radius:2px}
+.modal-hdr{
+  padding:8px 18px 14px;border-bottom:1px solid var(--bd);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.modal-title{font-size:15px;font-weight:700;color:var(--t1);letter-spacing:.5px}
+.modal-close{
+  background:var(--s2s);border:1px solid var(--bd);
+  color:var(--t2);width:30px;height:30px;border-radius:50%;
+  cursor:pointer;font-size:14px;font-family:inherit;
+  display:flex;align-items:center;justify-content:center;
+}
+.modal-body{flex:1;overflow-y:auto;padding:18px}
+
+/* 設定セクション */
+.setting-sec{
+  background:var(--s2s);border:1px solid var(--bd2);
+  border-radius:var(--r);padding:16px;margin-bottom:14px;
+}
+.setting-sec-title{
+  font-size:10px;color:var(--uc);letter-spacing:2px;
+  text-transform:uppercase;margin-bottom:14px;
+  display:flex;align-items:center;gap:8px;
+}
+.setting-sec-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(59,130,246,.3),transparent)}
+
+.finput{
+  width:100%;background:var(--s3);border:1px solid var(--bd);
+  color:var(--t1);padding:11px 14px;border-radius:var(--r);
+  font-family:inherit;font-size:14px;outline:none;
+  transition:border-color .2s;margin-bottom:10px;
+}
+.finput:focus{border-color:var(--uc);box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+.finput::placeholder{color:var(--t3)}
+.finput:last-of-type{margin-bottom:0}
+
+.color-preview-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.color-swatch-big{
+  width:44px;height:44px;border-radius:8px;
+  border:1px solid rgba(255,255,255,.15);flex-shrink:0;
+  transition:background .3s;
+}
+.color-input-text{flex:1}
+
+.sbtn{
+  width:100%;padding:13px;border:none;border-radius:var(--r);
+  font-family:inherit;font-size:13px;font-weight:700;
+  letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;
+  transition:all .2s;margin-top:10px;
+}
+.sbtn-ac{background:linear-gradient(135deg,var(--uc),var(--uc2));color:#fff;box-shadow:0 4px 16px rgba(59,130,246,.3)}
+.sbtn-ac:active{transform:scale(.98)}
+.sbtn-ac:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.sbtn-logout{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--ar)}
+.sbtn-logout:active{background:rgba(239,68,68,.18)}
+
+.modal-footer{padding:14px 18px;border-top:1px solid var(--bd);padding-bottom:max(14px,env(safe-area-inset-bottom,14px))}
+</style>
+</head>
+<body>
+
+<!-- 背景 -->
+<div id="BG"></div>
+
+<!-- ローディング -->
+<div class="lov on" id="LOV"><div class="spin"></div><div class="ltxt" id="LOV_TXT">LOADING...</div></div>
+
+<!-- トースト -->
+<div class="toast" id="TOAST"></div>
+
+<!-- ═══════════════════════════════════════════
+     ログイン画面
+═══════════════════════════════════════════ -->
+<div id="LOGIN_SCREEN">
+
+  <!-- GAS URLバナー -->
+  <div id="CONFIG_BANNER">
+    <span>⚠</span>
+    <input type="text" id="URL_INPUT" placeholder="GAS URLを貼り付け">
+    <button onclick="saveUrl()">保存</button>
+  </div>
+
+  <div class="login-logo">🌐</div>
+  <div class="login-nation">National Operation System</div>
+  <div class="login-title">国家運営ポータル</div>
+
+  <div class="login-card">
+    <label class="lbl">国家を選択</label>
+    <div class="lcnt-wrap">
+      <select class="lcnt-sel" id="L_CSEL">
+        <option value="">─ 読込中... ─</option>
+      </select>
+      <span class="lcnt-arr">▼</span>
+    </div>
+
+    <label class="lbl">パスワード</label>
+    <div class="lpw-wrap" id="LPW_WRAP">
+      <input type="password" id="LPW" placeholder="パスワードを入力"
+        maxlength="32" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter')doLogin()">
+      <button class="leye" onclick="toggleEye()">👁</button>
+    </div>
+    <div class="lerr" id="L_ERR"></div>
+
+    <button class="lbtn" id="L_BTN" onclick="doLogin()">▶ ログイン</button>
+    <div class="lhint">国家運営メンバー専用サービスです</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     ホーム（ログイン後）
+═══════════════════════════════════════════ -->
+<div id="HOME">
+
+  <!-- ヘッダー -->
+  <div class="hdr">
+    <div class="hdr-left">
+      <div class="hdr-flag" id="H_FLAG"></div>
+      <div class="hdr-texts">
+        <div class="hdr-label">現在の国家</div>
+        <div class="hdr-nation" id="H_NATION">─</div>
+      </div>
+    </div>
+    <div class="hdr-right">
+      <button class="hdr-btn" onclick="openSettings()">⚙ 設定</button>
+    </div>
+  </div>
+
+  <!-- ヒーロー -->
+  <div class="hero">
+    <div class="hero-welcome">Welcome Back</div>
+    <div class="hero-name" id="H_HERO_NAME">─</div>
+    <div class="hero-sub" id="H_HERO_SUB">国家運営システムへようこそ</div>
+  </div>
+
+  <!-- ナビゲーション -->
+  <div class="sec-title">NAVIGATION</div>
+  <div class="nav-grid">
+
+    <a class="nav-btn" href="Action.html">
+      <div class="nav-icon">📜</div>
+      <div>
+        <div class="nav-label">政策</div>
+        <div class="nav-sub">国家の政策を管理</div>
+      </div>
+      <div class="nav-arr">›</div>
+    </a>
+
+    <a class="nav-btn" href="State.html">
+      <div class="nav-icon">🗺️</div>
+      <div>
+        <div class="nav-label">ステート政策</div>
+        <div class="nav-sub">地域ごとの政策</div>
+      </div>
+      <div class="nav-arr">›</div>
+    </a>
+
+    <a class="nav-btn" href="mailbox.html">
+      <div class="nav-icon">📬</div>
+      <div>
+        <div class="nav-label">メールボックス</div>
+        <div class="nav-sub">国家間の通信</div>
+      </div>
+      <div class="nav-arr">›</div>
+    </a>
+
+    <a class="nav-btn" href="trade.html">
+      <div class="nav-icon">🚢</div>
+      <div>
+        <div class="nav-label">貿易管理</div>
+        <div class="nav-sub">個人間貿易・貿易路</div>
+      </div>
+      <div class="nav-arr">›</div>
+    </a>
+
+    <a class="nav-btn" href="information.html">
+      <div class="nav-icon">📊</div>
+      <div>
+        <div class="nav-label">情報</div>
+        <div class="nav-sub">各種情報を閲覧</div>
+      </div>
+      <div class="nav-arr">›</div>
+    </a>
+
+    <a class="nav-btn" href="War.html">
+      <div class="nav-icon">⚔️</div>
+      <div>
+        <div class="nav-label">戦争システム</div>
+        <div class="nav-sub">戦争・軍事操作</div>
+      </div>
+      <div class="nav-arr">›</div>
+    </a>
+
+    <a class="nav-btn" href="Diplomacy.html">
+      <div class="nav-icon">🤝</div>
+      <div>
+        <div class="nav-label">外交</div>
+        <div class="nav-sub">外交・条約管理</div>
+      </div>
+      <div class="nav-arr">›</div>
+    </a>
+
+    <a class="nav-btn" href="System.html">
+      <div class="nav-icon">🏛️</div>
+      <div>
+        <div class="nav-label">民間システム</div>
+        <div class="nav-sub">民間・社会システム</div>
+      </div>
+      <div class="nav-arr">›</div>
+    </a>
+
+    <!-- 選挙（無効・取り消し線） -->
+    <div class="nav-btn disabled" style="grid-column:span 2" onclick="return false">
+      <div class="nav-icon">🗳️</div>
+      <div>
+        <div class="nav-label">選挙の投票</div>
+        <div class="nav-sub">現在利用不可</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 掲示板 -->
+  <div class="sec-title">BULLETIN BOARD</div>
+  <div class="bbs-wrap">
+    <div class="bbs-card">
+      <div class="bbs-head">
+        <div class="bbs-head-l">
+          <span class="bbs-icon">📋</span>
+          <span class="bbs-htitle">掲示板</span>
+          <span class="bbs-count" id="BBS_COUNT">─</span>
+        </div>
+        <button class="bbs-refresh" onclick="loadMessages()" title="更新">↻</button>
+      </div>
+
+      <!-- 投稿フォーム -->
+      <div class="bbs-form">
+        <div class="bbs-input-wrap">
+          <textarea class="bbs-textarea" id="BBS_TEXT"
+            placeholder="メッセージを入力…"
+            oninput="updCharCount()"
+            onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey))postMsg()"
+            rows="1" maxlength="500"></textarea>
+          <button class="bbs-post-btn" id="BBS_POST" onclick="postMsg()">投稿</button>
+        </div>
+        <div class="bbs-char" id="BBS_CHAR">0 / 500</div>
+      </div>
+
+      <!-- メッセージ一覧 -->
+      <div class="bbs-msgs" id="BBS_MSGS">
+        <div class="bbs-empty">読込中...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     設定モーダル
+═══════════════════════════════════════════ -->
+<div class="mover" id="SETTINGS_MODAL" onclick="handleOvClick(event)">
+  <div class="modal">
+    <div class="modal-handle"><div class="modal-handle-bar"></div></div>
+    <div class="modal-hdr">
+      <div class="modal-title">⚙ 設定</div>
+      <button class="modal-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- パスワード変更 -->
+      <div class="setting-sec">
+        <div class="setting-sec-title">🔐 パスワード変更</div>
+        <input type="password" class="finput" id="S_OLD_PW" placeholder="現在のパスワード" autocomplete="current-password">
+        <input type="password" class="finput" id="S_NEW_PW" placeholder="新しいパスワード（4文字以上）" autocomplete="new-password">
+        <input type="password" class="finput" id="S_NEW_PW2" placeholder="新しいパスワード（確認）" autocomplete="new-password">
+        <button class="sbtn sbtn-ac" id="S_PW_BTN" onclick="changePW()">パスワードを変更</button>
+      </div>
+
+      <!-- カラー変更 -->
+      <div class="setting-sec">
+        <div class="setting-sec-title">🎨 国家カラー変更</div>
+        <div class="color-preview-row">
+          <div class="color-swatch-big" id="S_COLOR_SWATCH"></div>
+          <input type="text" class="finput color-input-text" id="S_COLOR_TEXT"
+            placeholder="#3b82f6" maxlength="9"
+            oninput="updColorPreview()" style="margin-bottom:0">
+        </div>
+        <input type="color" id="S_COLOR_PICKER" style="position:absolute;opacity:0;width:0;height:0" onchange="onColorPick()">
+        <button class="sbtn sbtn-ac" onclick="document.getElementById('S_COLOR_PICKER').click()"
+          style="background:rgba(255,255,255,.06);border:1px solid var(--bd);color:var(--t2);box-shadow:none;margin-top:0;margin-bottom:10px">
+          🎨 カラーピッカーを使う
+        </button>
+        <button class="sbtn sbtn-ac" id="S_COLOR_BTN" onclick="changeColor()">カラーを変更</button>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="sbtn sbtn-logout" onclick="doLogout()">🚪 ログアウト</button>
+    </div>
+  </div>
+</div>
+
+<script>
+
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbwUsUaV5xnoJz4AcOLrb4PQbE3QpQF81dl5iy8URdbHhu_jHuVumZkyqoTvEJCxlI9qLQ/exec';
+
+var ADMIN_PW = '03280317';
+
+var LS_URL   = 'home_gas_url';
+var LS_SES   = 'home_session';
+
+// セッションデータ
+var SESSION  = null; // { country, color }
+
+// ═══════════════════════════════════════════════════
+//  起動
+// ═══════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', function(){
+  var stored = localStorage.getItem(LS_URL);
+  if(stored) GAS_URL = stored;
+  if(!GAS_URL.trim()){ showBanner(); hideLoading(); }
+
+  // セッション復元
+  try{
+    var s = sessionStorage.getItem(LS_SES);
+    if(s){ SESSION = JSON.parse(s); }
+  }catch(e){}
+
+  if(SESSION){
+    applySession();
+    loadMessages();
+  } else {
+    hideLoading();
+    document.getElementById('LOGIN_SCREEN').style.display='flex';
+    if(GAS_URL) loadCountryList();
+  }
+});
+
+// URL バナー
+function showBanner(){
+  var b=document.getElementById('CONFIG_BANNER');
+  b.style.display='flex';
+  document.getElementById('URL_INPUT').value=GAS_URL||'';
+}
+function saveUrl(){
+  var v=document.getElementById('URL_INPUT').value.trim();
+  if(!v){toast('URLを入力してください','er');return;}
+  GAS_URL=v; localStorage.setItem(LS_URL,v);
+  document.getElementById('CONFIG_BANNER').style.display='none';
+  loadCountryList();
+}
+
+// ═══════════════════════════════════════════════════
+//  国家リスト読込（ログイン用セレクト）
+// ═══════════════════════════════════════════════════
+function loadCountryList(){
+  if(!GAS_URL){ showBanner(); return; }
+  fetch(GAS_URL+'?action=login&country=__LIST__&password=__LIST__')
+    .then(function(r){return r.json();})
+    .catch(function(){return null;});
+  
+  fetch(GAS_URL+'?action=getCountryList')
+    .then(function(r){return r.json();})
+    .then(function(d){
+      var sel=document.getElementById('L_CSEL');
+      sel.innerHTML='<option value="">─ 国家を選択 ─</option>';
+      if(d&&d.countries){
+        d.countries.forEach(function(c){
+          var o=document.createElement('option');
+          o.value=c;o.textContent=c;sel.appendChild(o);
+        });
+      }
+    })
+    .catch(function(){
+      // リスト取得失敗 → 手入力に切り替え
+      document.getElementById('L_CSEL').style.display='none';
+      var inp=document.createElement('input');
+      inp.type='text';inp.id='L_CSEL';
+      inp.className='lcnt-sel';inp.placeholder='国家名を直接入力';
+      inp.style.appearance='auto';
+      document.querySelector('.lcnt-wrap').insertBefore(inp, document.querySelector('.lcnt-arr'));
+    });
+}
+
+// ═══════════════════════════════════════════════════
+//  ログイン
+// ═══════════════════════════════════════════════════
+function doLogin(){
+  var country = (document.getElementById('L_CSEL').value||'').trim();
+  var pw      = document.getElementById('LPW').value.trim();
+  var err     = document.getElementById('L_ERR');
+  var wrap    = document.getElementById('LPW_WRAP');
+  var btn     = document.getElementById('L_BTN');
+
+  if(!country){ err.textContent='国家を選択してください'; return; }
+  if(!pw)     { err.textContent='パスワードを入力してください'; shakeWrap(); return; }
+  if(!GAS_URL){ showBanner(); return; }
+
+  btn.disabled=true;btn.textContent='認証中...';
+  showLoading('認証中...');
+
+  fetch(GAS_URL+'?action=login&country='+encodeURIComponent(country)+'&password='+encodeURIComponent(pw))
+    .then(function(r){return r.json();})
+    .then(function(d){
+      hideLoading();btn.disabled=false;btn.textContent='▶ ログイン';
+      if(d&&d.success){
+        SESSION={country:d.country,color:d.color};
+        sessionStorage.setItem(LS_SES,JSON.stringify(SESSION));
+        err.textContent='';
+        document.getElementById('LOGIN_SCREEN').style.display='none';
+        applySession();
+        loadMessages();
+      } else {
+        err.textContent=d?d.error:'ログインに失敗しました';
+        shakeWrap();
+        document.getElementById('LPW').value='';
+      }
+    })
+    .catch(function(e){
+      hideLoading();btn.disabled=false;btn.textContent='▶ ログイン';
+      err.textContent='通信エラー: '+e;
+    });
+}
+
+function shakeWrap(){
+  var w=document.getElementById('LPW_WRAP');
+  w.classList.add('err');
+  setTimeout(function(){w.classList.remove('err');},500);
+}
+
+function toggleEye(){
+  var i=document.getElementById('LPW');
+  var btn=i.nextElementSibling;
+  if(i.type==='password'){i.type='text';btn.textContent='🙈';}
+  else{i.type='password';btn.textContent='👁';}
+}
+
+// ═══════════════════════════════════════════════════
+//  セッション適用（ログイン後のホーム表示）
+// ═══════════════════════════════════════════════════
+function applySession(){
+  if(!SESSION) return;
+  document.getElementById('HOME').style.display='block';
+  document.getElementById('H_NATION').textContent=SESSION.country;
+  document.getElementById('H_HERO_NAME').textContent=SESSION.country;
+  document.getElementById('H_HERO_SUB').textContent=SESSION.country+' として操作中';
+
+  setAccent(SESSION.color);
+
+  // 設定モーダルの色プリセット
+  document.getElementById('S_COLOR_TEXT').value=SESSION.color;
+  updColorPreview();
+  document.getElementById('S_COLOR_PICKER').value=SESSION.color;
+  hideLoading();
+}
+
+function setAccent(color){
+  if(!color) return;
+  document.documentElement.style.setProperty('--uc', color);
+  document.documentElement.style.setProperty('--uc2', darken(color,.25));
+  document.getElementById('H_FLAG').style.background=color;
+  document.getElementById('H_FLAG').style.boxShadow='0 0 14px '+color;
+  // スピナーも更新
+  document.querySelectorAll('.spin').forEach(function(s){s.style.borderTopColor=color;});
+  // BBS投稿ボタン
+  var pb=document.getElementById('BBS_POST');
+  if(pb)pb.style.background='linear-gradient(135deg,'+color+','+darken(color,.25)+')';
+}
+
+// 色を暗くする簡易関数
+function darken(hex,amt){
+  hex=hex.replace('#','');
+  if(hex.length===3) hex=hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+  var r=Math.max(0,Math.round(parseInt(hex.substr(0,2),16)*(1-amt)));
+  var g=Math.max(0,Math.round(parseInt(hex.substr(2,2),16)*(1-amt)));
+  var b=Math.max(0,Math.round(parseInt(hex.substr(4,2),16)*(1-amt)));
+  return '#'+(r<16?'0':'')+r.toString(16)+(g<16?'0':'')+g.toString(16)+(b<16?'0':'')+b.toString(16);
+}
+
+// ═══════════════════════════════════════════════════
+//  掲示板
+// ═══════════════════════════════════════════════════
+function loadMessages(){
+  if(!GAS_URL) return;
+  fetch(GAS_URL+'?action=getMessages')
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d&&d.success) renderMessages(d.messages||[]);
+    })
+    .catch(function(){});
+}
+
+function renderMessages(msgs){
+  var el=document.getElementById('BBS_MSGS');
+  var cnt=document.getElementById('BBS_COUNT');
+  cnt.textContent=msgs.length+'件';
+  if(!msgs.length){
+    el.innerHTML='<div class="bbs-empty">📭 まだメッセージはありません</div>';
+    return;
+  }
+  el.innerHTML='';
+  msgs.forEach(function(m){
+    var isMe= SESSION && norm(m.author)===norm(SESSION.country);
+    var isAdmin= m.isAdmin;
+    var canDel= (SESSION && SESSION.country==='運営') || isAdmin;
+
+    // 著者の色を取得（CNTS不要、セッションカラー使用）
+    var flagColor= isMe ? (SESSION.color||'#3b82f6') : '#2e4260';
+
+    var div=document.createElement('div');
+    div.className='msg-item';
+    div.dataset.row=m.id;
+    div.innerHTML=
+      '<div class="msg-header">'+
+        '<div class="msg-flag" style="background:'+esc(flagColor)+'"></div>'+
+        '<span class="msg-author">'+esc(m.author)+'</span>'+
+        (isAdmin?'<span class="msg-admin-badge">運営</span>':'')+
+        '<span class="msg-time">'+esc(m.timestamp)+'</span>'+
+      '</div>'+
+      '<div class="msg-text">'+esc(m.text)+'</div>'+
+      '<button class="msg-del" onclick="delMsg('+m.id+',this)" data-row="'+m.id+'">削除</button>';
+
+    // 削除ボタン表示（運営パスワード所持者、または自分の投稿）
+    var delBtn=div.querySelector('.msg-del');
+    if(delBtn && (SESSION&&SESSION.country==='運営')){
+      delBtn.style.display='block';
+    }
+    el.appendChild(div);
+  });
+}
+
+function updCharCount(){
+  var t=document.getElementById('BBS_TEXT').value;
+  document.getElementById('BBS_CHAR').textContent=t.length+' / 500';
+}
+
+function postMsg(){
+  if(!SESSION){toast('ログインしてください','er');return;}
+  var text=document.getElementById('BBS_TEXT').value.trim();
+  if(!text){toast('メッセージを入力してください','wa');return;}
+  if(text.length>500){toast('500文字以内にしてください','er');return;}
+
+  var isAdmin= (SESSION.country==='運営')?'1':'0';
+  var btn=document.getElementById('BBS_POST');
+  btn.disabled=true;btn.textContent='投稿中';
+
+  var url=GAS_URL+'?action=postMessage'+
+    '&author='+encodeURIComponent(SESSION.country)+
+    '&text='+encodeURIComponent(text)+
+    '&isAdmin='+isAdmin;
+
+  fetch(url)
+    .then(function(r){return r.json();})
+    .then(function(d){
+      btn.disabled=false;btn.textContent='投稿';
+      if(d&&d.success){
+        document.getElementById('BBS_TEXT').value='';
+        updCharCount();
+        toast('投稿しました','ok');
+        loadMessages();
+      } else {
+        toast('投稿エラー: '+(d?d.error:'不明'),'er');
+      }
+    })
+    .catch(function(e){
+      btn.disabled=false;btn.textContent='投稿';
+      toast('通信エラー: '+e,'er');
+    });
+}
+
+function delMsg(rowNum, btn){
+  if(!confirm('このメッセージを削除しますか？')) return;
+  var url=GAS_URL+'?action=deleteMessage&rowNum='+rowNum+'&adminPW='+encodeURIComponent(ADMIN_PW);
+  fetch(url)
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d&&d.success){toast('削除しました','ok');loadMessages();}
+      else toast('削除エラー: '+(d?d.error:'不明'),'er');
+    });
+}
+
+// ═══════════════════════════════════════════════════
+//  設定モーダル
+// ═══════════════════════════════════════════════════
+function openSettings(){document.getElementById('SETTINGS_MODAL').classList.add('on');}
+function closeSettings(){document.getElementById('SETTINGS_MODAL').classList.remove('on');}
+function handleOvClick(e){if(e.target===document.getElementById('SETTINGS_MODAL'))closeSettings();}
+
+// パスワード変更
+function changePW(){
+  if(!SESSION) return;
+  var oldPW = document.getElementById('S_OLD_PW').value.trim();
+  var newPW = document.getElementById('S_NEW_PW').value.trim();
+  var newPW2= document.getElementById('S_NEW_PW2').value.trim();
+  if(!oldPW){toast('現在のパスワードを入力してください','wa');return;}
+  if(!newPW){toast('新しいパスワードを入力してください','wa');return;}
+  if(newPW!==newPW2){toast('新しいパスワードが一致しません','er');return;}
+  if(newPW.length<4){toast('4文字以上にしてください','wa');return;}
+
+  var btn=document.getElementById('S_PW_BTN');
+  btn.disabled=true;btn.textContent='変更中...';
+
+  var url=GAS_URL+'?action=changePassword'+
+    '&country='+encodeURIComponent(SESSION.country)+
+    '&oldPW='+encodeURIComponent(oldPW)+
+    '&newPW='+encodeURIComponent(newPW);
+
+  fetch(url)
+    .then(function(r){return r.json();})
+    .then(function(d){
+      btn.disabled=false;btn.textContent='パスワードを変更';
+      if(d&&d.success){
+        toast('✓ パスワードを変更しました','ok');
+        document.getElementById('S_OLD_PW').value='';
+        document.getElementById('S_NEW_PW').value='';
+        document.getElementById('S_NEW_PW2').value='';
+        closeSettings();
+      } else {
+        toast((d?d.error:'変更エラー'),'er');
+      }
+    })
+    .catch(function(e){
+      btn.disabled=false;btn.textContent='パスワードを変更';
+      toast('通信エラー: '+e,'er');
+    });
+}
+
+// カラー変更
+function updColorPreview(){
+  var val=document.getElementById('S_COLOR_TEXT').value.trim();
+  var sw=document.getElementById('S_COLOR_SWATCH');
+  if(/^#[0-9a-fA-F]{3,6}$/.test(val)){
+    sw.style.background=val;
+    sw.style.boxShadow='0 0 12px '+val+'66';
+  } else {
+    sw.style.background='#1e2d45';sw.style.boxShadow='none';
+  }
+}
+function onColorPick(){
+  var col=document.getElementById('S_COLOR_PICKER').value;
+  document.getElementById('S_COLOR_TEXT').value=col;
+  updColorPreview();
+}
+
+function changeColor(){
+  if(!SESSION) return;
+  var color=document.getElementById('S_COLOR_TEXT').value.trim();
+  if(!/^#[0-9a-fA-F]{3,6}$/.test(color)){toast('有効なカラーコードを入力してください（例: #3b82f6）','wa');return;}
+
+  var btn=document.getElementById('S_COLOR_BTN');
+  btn.disabled=true;btn.textContent='変更中...';
+
+  var url=GAS_URL+'?action=changeColor'+
+    '&country='+encodeURIComponent(SESSION.country)+
+    '&color='+encodeURIComponent(color);
+
+  fetch(url)
+    .then(function(r){return r.json();})
+    .then(function(d){
+      btn.disabled=false;btn.textContent='カラーを変更';
+      if(d&&d.success){
+        SESSION.color=color;
+        sessionStorage.setItem(LS_SES,JSON.stringify(SESSION));
+        setAccent(color);
+        toast('✓ カラーを変更しました','ok');
+        closeSettings();
+      } else {
+        toast((d?d.error:'変更エラー'),'er');
+      }
+    })
+    .catch(function(e){
+      btn.disabled=false;btn.textContent='カラーを変更';
+      toast('通信エラー: '+e,'er');
+    });
+}
+
+// ログアウト
+function doLogout(){
+  if(!confirm('ログアウトしますか？')) return;
+  SESSION=null;
+  sessionStorage.removeItem(LS_SES);
+  document.getElementById('HOME').style.display='none';
+  document.getElementById('LOGIN_SCREEN').style.display='flex';
+  closeSettings();
+  document.getElementById('LPW').value='';
+  document.getElementById('L_ERR').textContent='';
+  toast('ログアウトしました','ok');
+  if(GAS_URL) loadCountryList();
+}
+
+// ═══════════════════════════════════════════════════
+//  ユーティリティ
+// ═══════════════════════════════════════════════════
+function norm(s){return String(s||'').trim().toLowerCase();}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function showLoading(t){document.getElementById('LOV_TXT').textContent=t||'LOADING...';document.getElementById('LOV').classList.add('on');}
+function hideLoading(){document.getElementById('LOV').classList.remove('on');}
+var _tt;
+function toast(msg,type){var el=document.getElementById('TOAST');el.textContent=msg;el.className='toast on '+(type||'');clearTimeout(_tt);_tt=setTimeout(function(){el.className='toast';},3500);}
+</script>
+</body>
+</html>
