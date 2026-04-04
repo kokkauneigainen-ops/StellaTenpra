@@ -5,16 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>地図管理システム</title>
 <style>
-/* ─── リセット & 変数 ─────────────────────────────── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#07090f;--s1:#0d1220;--s2:#121a2c;--s3:#192236;
   --bd:#1e2d45;--bd2:#152035;
   --t1:#c8d8f0;--t2:#607898;--t3:#2e4260;
   --ac:#3b82f6;--ag:#10b981;--ar:#ef4444;--ay:#f59e0b;
+  --am:#a855f7;
   --r:10px;--rl:16px;
 }
-html{height:100%}
+html,body{height:100%}
 body{
   background:var(--bg);color:var(--t1);
   font-family:'Courier New','Noto Sans JP',monospace;
@@ -25,29 +25,90 @@ body{
   background-size:44px 44px;
 }
 
-/* ─── 設定バナー（URLが空のときのみ表示） ─── */
-#config-banner{
-  background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(239,68,68,.1));
+/* ═══════════════════════════════════════════════
+   パスワード画面
+═══════════════════════════════════════════════ */
+#PW_SCREEN{
+  position:fixed;inset:0;z-index:2000;
+  background:radial-gradient(ellipse at 50% 40%,#0d1830 0%,#04070e 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:0;
+}
+.pw-emblem{
+  font-size:52px;margin-bottom:20px;
+  filter:drop-shadow(0 0 24px rgba(59,130,246,.6));
+  animation:emblem-float 3s ease-in-out infinite;
+}
+@keyframes emblem-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.pw-title{
+  font-size:11px;letter-spacing:5px;color:var(--t2);
+  text-transform:uppercase;margin-bottom:4px;
+}
+.pw-subtitle{font-size:22px;font-weight:700;color:var(--t1);letter-spacing:2px;margin-bottom:32px}
+.pw-box{
+  background:rgba(13,18,32,.9);border:1px solid var(--bd);
+  border-radius:var(--rl);padding:28px 24px;width:min(340px,90vw);
+  box-shadow:0 0 60px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.04);
+}
+.pw-label{font-size:9px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+.pw-input-wrap{
+  display:flex;align-items:center;background:var(--s2);
+  border:1px solid var(--bd);border-radius:var(--r);
+  margin-bottom:14px;overflow:hidden;transition:border-color .2s;
+}
+.pw-input-wrap:focus-within{border-color:var(--ac);box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+.pw-input-wrap.err{border-color:var(--ar);box-shadow:0 0 0 3px rgba(239,68,68,.12);animation:shake .35s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+#PW_IN{
+  flex:1;background:none;border:none;color:var(--t1);
+  font-family:inherit;font-size:18px;letter-spacing:4px;
+  padding:12px 14px;outline:none;
+}
+#PW_IN::placeholder{font-size:13px;letter-spacing:1px;color:var(--t3)}
+.pw-eye{
+  background:none;border:none;color:var(--t2);
+  padding:0 14px;cursor:pointer;font-size:16px;
+  flex-shrink:0;
+}
+.pw-btn{
+  width:100%;padding:14px;background:linear-gradient(135deg,var(--ac),#1d4ed8);
+  border:none;border-radius:var(--r);color:#fff;
+  font-family:inherit;font-size:13px;font-weight:700;
+  letter-spacing:2px;text-transform:uppercase;cursor:pointer;
+  box-shadow:0 4px 20px rgba(59,130,246,.4);transition:all .2s;
+}
+.pw-btn:active{transform:scale(.98)}
+.pw-hint{text-align:center;font-size:10px;color:var(--t3);margin-top:14px;letter-spacing:.5px}
+.pw-err{
+  color:var(--ar);font-size:11px;text-align:center;
+  letter-spacing:.5px;margin-bottom:10px;min-height:16px;
+}
+
+/* ═══════════════════════════════════════════════
+   GAS URL バナー
+═══════════════════════════════════════════════ */
+#CONFIG_BANNER{
+  display:none;background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(239,68,68,.1));
   border-bottom:1px solid rgba(245,158,11,.4);
-  padding:10px 14px;
-  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;align-items:center;gap:10px;
   font-size:11px;color:#f59e0b;letter-spacing:.5px;
 }
-#config-banner input{
+#CONFIG_BANNER input{
   flex:1;background:rgba(0,0,0,.4);border:1px solid rgba(245,158,11,.4);
   color:#fde68a;font-family:inherit;font-size:11px;
   padding:6px 10px;border-radius:6px;outline:none;
 }
-#config-banner input:focus{border-color:#f59e0b}
-#config-banner button{
+#CONFIG_BANNER input:focus{border-color:#f59e0b}
+#CONFIG_BANNER button{
   background:rgba(245,158,11,.25);border:1px solid rgba(245,158,11,.5);
   color:#f59e0b;font-family:inherit;font-size:10px;
   padding:6px 12px;border-radius:6px;cursor:pointer;
   letter-spacing:1px;white-space:nowrap;
 }
-#config-banner button:active{background:rgba(245,158,11,.4)}
 
-/* ─── ヘッダー ─────────────────────────────────── */
+/* ═══════════════════════════════════════════════
+   ヘッダー
+═══════════════════════════════════════════════ */
 .hdr{
   background:linear-gradient(180deg,#0b1422 0%,var(--s1) 100%);
   border-bottom:1px solid var(--bd);
@@ -71,16 +132,14 @@ body{
   background:var(--s2);border:1px solid var(--bd);color:var(--t2);
   letter-spacing:.5px;
 }
-.sdot{
-  width:6px;height:6px;border-radius:50%;
-  background:var(--ag);box-shadow:0 0 6px var(--ag);
-  animation:pdot 2s ease-in-out infinite;
-}
+.sdot{width:6px;height:6px;border-radius:50%;background:var(--ag);box-shadow:0 0 6px var(--ag);animation:pdot 2s ease-in-out infinite}
 .sdot.ld{background:var(--ay);box-shadow:0 0 6px var(--ay)}
 .sdot.er{background:var(--ar);box-shadow:0 0 6px var(--ar);animation:none}
 @keyframes pdot{0%,100%{opacity:1}50%{opacity:.3}}
 
-/* ─── マップ ────────────────────────────────────── */
+/* ═══════════════════════════════════════════════
+   マップ
+═══════════════════════════════════════════════ */
 .map-wrap{background:var(--s1);border-bottom:1px solid var(--bd)}
 .map-lbl{font-size:9px;letter-spacing:2px;color:var(--t3);text-transform:uppercase;padding:6px 14px 0}
 .map-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--bd) transparent}
@@ -88,51 +147,92 @@ body{
 .map-scroll::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px}
 #svg-wrap{min-width:320px;padding:8px}
 #svg-wrap svg{display:block;width:100%;height:auto;background-color:#07090f!important}
-#svg-wrap path{transition:filter .2s;cursor:pointer}
+#svg-wrap path{transition:filter .15s;cursor:pointer}
 #svg-wrap path:hover{filter:brightness(1.5)}
 
-/* ─── モードタブ ─────────────────────────────────── */
+/* 建国モード時の選択済みpath */
+#svg-wrap path.sel-path{
+  stroke:#a855f7!important;stroke-width:2.5!important;
+  filter:brightness(1.3) drop-shadow(0 0 6px rgba(168,85,247,.6));
+}
+
+/* ═══════════════════════════════════════════════
+   モードタブ (3タブ)
+═══════════════════════════════════════════════ */
 .tabs{display:flex;background:var(--s2);border-bottom:1px solid var(--bd)}
 .tab{
-  flex:1;padding:9px 6px;background:none;border:none;
-  color:var(--t2);font-family:inherit;font-size:11px;
-  letter-spacing:1px;text-transform:uppercase;cursor:pointer;
+  flex:1;padding:9px 4px;background:none;border:none;
+  color:var(--t2);font-family:inherit;font-size:10px;
+  letter-spacing:.5px;text-transform:uppercase;cursor:pointer;
   border-bottom:2px solid transparent;transition:all .2s;
 }
 .tab.on{color:var(--ac);border-bottom-color:var(--ac);background:rgba(59,130,246,.05)}
+.tab.on-f{color:var(--am);border-bottom-color:var(--am);background:rgba(168,85,247,.05)}
 
 /* ステータスチップ */
-.chips{
-  display:none;padding:8px 12px;background:var(--s1);
-  border-bottom:1px solid var(--bd);overflow-x:auto;gap:6px;
-  -webkit-overflow-scrolling:touch;scrollbar-width:none;
-}
+.chips{display:none;padding:8px 12px;background:var(--s1);border-bottom:1px solid var(--bd);overflow-x:auto;gap:6px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
 .chips.on{display:flex}
-.chip{
-  white-space:nowrap;padding:5px 12px;border-radius:20px;
-  border:1px solid var(--bd);background:var(--s2);
-  color:var(--t2);font-family:inherit;font-size:10px;
-  letter-spacing:.5px;cursor:pointer;transition:all .2s;flex-shrink:0;
-}
+.chip{white-space:nowrap;padding:5px 12px;border-radius:20px;border:1px solid var(--bd);background:var(--s2);color:var(--t2);font-family:inherit;font-size:10px;letter-spacing:.5px;cursor:pointer;transition:all .2s;flex-shrink:0}
 .chip.on{border-color:var(--ag);background:rgba(16,185,129,.1);color:var(--t1)}
 
-/* ─── コンテンツ ─────────────────────────────────── */
-.cnt{padding:12px;padding-bottom:80px}
-.sec-hd{
-  display:flex;align-items:center;gap:8px;
-  margin-bottom:10px;color:var(--t3);font-size:9px;
-  letter-spacing:2px;text-transform:uppercase;
+/* ═══════════════════════════════════════════════
+   建国操作バー（マルチ選択時）
+═══════════════════════════════════════════════ */
+#FOUND_BAR{
+  display:none;position:sticky;top:52px;z-index:190;
+  background:linear-gradient(135deg,rgba(30,10,50,.97),rgba(18,14,36,.97));
+  border-bottom:1px solid rgba(168,85,247,.35);
+  padding:10px 14px;gap:8px;
+  box-shadow:0 4px 20px rgba(168,85,247,.2);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
 }
+#FOUND_BAR.on{display:flex;flex-wrap:wrap;align-items:center}
+.fb-title{
+  font-size:10px;font-weight:700;color:#c084fc;
+  letter-spacing:1.5px;text-transform:uppercase;
+  white-space:nowrap;
+}
+.fb-count{
+  background:rgba(168,85,247,.25);border:1px solid rgba(168,85,247,.4);
+  color:#c084fc;border-radius:20px;padding:2px 10px;
+  font-size:11px;font-weight:700;white-space:nowrap;
+}
+.fb-selwrap{position:relative;flex:1;min-width:130px}
+.fb-sel{
+  width:100%;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.4);
+  color:var(--t1);padding:8px 30px 8px 10px;border-radius:var(--r);
+  font-family:inherit;font-size:12px;outline:none;
+  appearance:none;-webkit-appearance:none;cursor:pointer;
+}
+.fb-sel:focus{border-color:#a855f7}
+.fb-sarr{position:absolute;right:9px;top:50%;transform:translateY(-50%);pointer-events:none;color:#a855f7;font-size:10px}
+.fb-preview{
+  width:14px;height:14px;border-radius:3px;flex-shrink:0;
+  border:1px solid rgba(255,255,255,.2);margin-left:-4px;
+  transition:background .3s;
+}
+.fb-btns{display:flex;gap:6px;width:100%}
+.fb-btn{
+  flex:1;padding:10px 8px;border:none;border-radius:var(--r);
+  font-family:inherit;font-size:11px;font-weight:700;
+  letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .2s;
+}
+.fb-apply{background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;box-shadow:0 4px 14px rgba(168,85,247,.4)}
+.fb-apply:active{transform:scale(.98)}
+.fb-apply:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.fb-clear{background:rgba(255,255,255,.05);border:1px solid var(--bd);color:var(--t2)}
+.fb-clear:active{background:rgba(255,255,255,.08)}
+.fb-selall{background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.3);color:#c084fc;font-size:10px;padding:8px;flex:0 0 auto}
+
+/* ═══════════════════════════════════════════════
+   コンテンツ
+═══════════════════════════════════════════════ */
+.cnt{padding:12px;padding-bottom:100px}
+.sec-hd{display:flex;align-items:center;gap:8px;margin-bottom:10px;color:var(--t3);font-size:9px;letter-spacing:2px;text-transform:uppercase}
 .sec-hd::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--bd),transparent)}
 
-/* 検索 */
-.srch{
-  display:flex;align-items:center;background:var(--s2);
-  border:1px solid var(--bd);border-radius:var(--r);
-  padding:8px 12px;margin-bottom:12px;gap:8px;
-  transition:border-color .2s;
-}
+.srch{display:flex;align-items:center;background:var(--s2);border:1px solid var(--bd);border-radius:var(--r);padding:8px 12px;margin-bottom:12px;gap:8px;transition:border-color .2s}
 .srch:focus-within{border-color:var(--ac);box-shadow:0 0 0 3px rgba(59,130,246,.1)}
 .srch input{flex:1;background:none;border:none;color:var(--t1);font-family:inherit;font-size:13px;outline:none}
 .srch input::placeholder{color:var(--t3)}
@@ -143,163 +243,132 @@ body{
   background:var(--s2);border:1px solid var(--bd2);
   border-radius:var(--r);padding:10px 11px;cursor:pointer;
   transition:all .18s;display:flex;align-items:center;gap:8px;
-  position:relative;overflow:hidden;
+  position:relative;overflow:hidden;user-select:none;
 }
 .card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.015),transparent);pointer-events:none}
 .card:hover,.card:active{border-color:var(--ac);background:var(--s3);transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.35)}
+/* 建国モードで選択済み */
+.card.sel-card{
+  border-color:#a855f7!important;
+  background:rgba(168,85,247,.12)!important;
+  box-shadow:0 0 0 2px rgba(168,85,247,.25);
+  transform:none!important;
+}
+.card.sel-card:hover{background:rgba(168,85,247,.18)!important}
+
+/* チェックボックス（建国モード） */
+.card-ck{
+  width:18px;height:18px;border-radius:4px;flex-shrink:0;
+  background:var(--s3);border:1.5px solid var(--bd);
+  display:none;align-items:center;justify-content:center;
+  font-size:11px;transition:all .15s;
+}
+.found-mode .card-ck{display:flex}
+.card.sel-card .card-ck{background:#7c3aed;border-color:#a855f7;color:#fff}
+
 .swatch{width:10px;height:32px;border-radius:3px;flex-shrink:0;border:1px solid rgba(255,255,255,.08)}
 .cinfo{flex:1;min-width:0}
 .cname{font-size:11px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.3px}
 .ccountry{font-size:9px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
 .carr{color:var(--t3);font-size:10px;flex-shrink:0}
+.found-mode .carr{display:none}
 .empty{text-align:center;padding:48px 20px;color:var(--t3);font-size:12px;letter-spacing:1px}
 
-/* ─── モーダル ───────────────────────────────────── */
-.mover{
-  display:none;position:fixed;inset:0;background:rgba(3,6,12,.88);
-  z-index:500;align-items:flex-end;justify-content:center;
-  backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);
-}
+/* ═══════════════════════════════════════════════
+   編集モーダル（1件）
+═══════════════════════════════════════════════ */
+.mover{display:none;position:fixed;inset:0;background:rgba(3,6,12,.88);z-index:500;align-items:flex-end;justify-content:center;backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
 .mover.on{display:flex}
-.modal{
-  background:var(--s1);border:1px solid var(--bd);
-  border-radius:var(--rl) var(--rl) 0 0;
-  width:100%;max-width:640px;max-height:88vh;
-  overflow:hidden;display:flex;flex-direction:column;
-  box-shadow:0 -8px 40px rgba(0,0,0,.65);
-  animation:sup .28s cubic-bezier(.22,1,.36,1);
-}
+.modal{background:var(--s1);border:1px solid var(--bd);border-radius:var(--rl) var(--rl) 0 0;width:100%;max-width:640px;max-height:88vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 -8px 40px rgba(0,0,0,.65);animation:sup .28s cubic-bezier(.22,1,.36,1)}
 @keyframes sup{from{transform:translateY(100%)}to{transform:translateY(0)}}
 .mhandle{display:flex;justify-content:center;padding:10px 0 4px}
 .mbar{width:36px;height:4px;background:var(--bd);border-radius:2px}
-.mhdr{
-  padding:8px 16px 12px;border-bottom:1px solid var(--bd);
-  display:flex;align-items:flex-start;gap:12px;
-}
+.mhdr{padding:8px 16px 12px;border-bottom:1px solid var(--bd);display:flex;align-items:flex-start;gap:12px}
 .mcolorbar{width:4px;height:40px;border-radius:2px;flex-shrink:0;margin-top:2px}
 .mtitles{flex:1}
 .mtag{font-size:8px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px}
 .mname{font-size:18px;font-weight:700;color:var(--t1);letter-spacing:1px}
 .msub{font-size:10px;color:var(--t2);margin-top:3px}
-.mclose{
-  background:var(--s2);border:1px solid var(--bd);color:var(--t2);
-  width:30px;height:30px;border-radius:50%;cursor:pointer;
-  font-size:14px;display:flex;align-items:center;justify-content:center;
-  flex-shrink:0;font-family:inherit;
-}
+.mclose{background:var(--s2);border:1px solid var(--bd);color:var(--t2);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:inherit}
 .mbody{flex:1;overflow-y:auto;padding:14px 16px;-webkit-overflow-scrolling:touch}
-
-/* フォーム */
 .fg{margin-bottom:14px}
 .fl{display:block;font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
 .selwrap{position:relative}
-.fsel{
-  width:100%;background:var(--s2);border:1px solid var(--bd);
-  color:var(--t1);padding:10px 40px 10px 12px;border-radius:var(--r);
-  font-family:inherit;font-size:13px;outline:none;
-  appearance:none;-webkit-appearance:none;transition:border-color .2s;cursor:pointer;
-}
+.fsel{width:100%;background:var(--s2);border:1px solid var(--bd);color:var(--t1);padding:10px 40px 10px 12px;border-radius:var(--r);font-family:inherit;font-size:13px;outline:none;appearance:none;-webkit-appearance:none;transition:border-color .2s;cursor:pointer}
 .fsel:focus{border-color:var(--ac)}
 .sarr{position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--t3);font-size:10px}
 .cpreview{height:4px;border-radius:0 0 var(--r) var(--r);transition:background .3s;margin-top:-4px}
-
-/* ステータス */
 .stath{display:flex;align-items:center;gap:8px;font-size:9px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin:16px 0 10px}
 .stath::after{content:'';flex:1;height:1px;background:var(--bd)}
-.srow{background:var(--s2);border:1px solid var(--bd2);border-radius:var(--r);padding:10px 12px;margin-bottom:8px;transition:border-color .2s}
-.srow:focus-within{border-color:var(--bd)}
+.srow{background:var(--s2);border:1px solid var(--bd2);border-radius:var(--r);padding:10px 12px;margin-bottom:8px}
 .stop{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .skey{font-size:11px;color:var(--t2);letter-spacing:.5px}
-.snum{
-  width:72px;background:var(--s3);border:1px solid var(--bd);
-  color:var(--t1);padding:5px 8px;border-radius:6px;
-  font-family:inherit;font-size:12px;text-align:right;outline:none;
-  transition:border-color .2s;
-}
+.snum{width:72px;background:var(--s3);border:1px solid var(--bd);color:var(--t1);padding:5px 8px;border-radius:6px;font-family:inherit;font-size:12px;text-align:right;outline:none;transition:border-color .2s}
 .snum:focus{border-color:var(--ac)}
-.sslide{
-  width:100%;-webkit-appearance:none;height:4px;
-  border-radius:2px;outline:none;cursor:pointer;
-}
-.sslide::-webkit-slider-thumb{
-  -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
-  background:#fff;border:2px solid var(--ac);
-  box-shadow:0 0 6px rgba(59,130,246,.4);cursor:pointer;
-}
-.sslide::-moz-range-thumb{
-  width:16px;height:16px;border-radius:50%;
-  background:#fff;border:2px solid var(--ac);cursor:pointer;
-}
+.sslide{width:100%;-webkit-appearance:none;height:4px;border-radius:2px;outline:none;cursor:pointer}
+.sslide::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#fff;border:2px solid var(--ac);box-shadow:0 0 6px rgba(59,130,246,.4);cursor:pointer}
+.sslide::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:2px solid var(--ac);cursor:pointer}
 .strk{height:4px;border-radius:2px;margin-top:6px;background:linear-gradient(90deg,#ef4444,#f59e0b 50%,#10b981);position:relative}
-.sind{
-  position:absolute;top:-3px;width:10px;height:10px;
-  border-radius:50%;border:2px solid #fff;
-  box-shadow:0 0 6px rgba(0,0,0,.5);transform:translateX(-50%);
-  transition:left .15s;
-}
-
-/* ─── フッター・ボタン ─────────────────────────────── */
-.mfoot{
-  padding:12px 16px;border-top:1px solid var(--bd);
-  display:flex;gap:8px;background:var(--s1);
-  padding-bottom:max(12px,env(safe-area-inset-bottom,12px));
-}
+.sind{position:absolute;top:-3px;width:10px;height:10px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 6px rgba(0,0,0,.5);transform:translateX(-50%);transition:left .15s}
+.mfoot{padding:12px 16px;border-top:1px solid var(--bd);display:flex;gap:8px;background:var(--s1);padding-bottom:max(12px,env(safe-area-inset-bottom,12px))}
 .btn{flex:1;padding:13px 10px;border:none;border-radius:var(--r);font-family:inherit;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all .2s}
 .btn-c{background:var(--s2);color:var(--t2);border:1px solid var(--bd)}
 .btn-c:active{background:var(--s3)}
 .btn-s{background:linear-gradient(135deg,var(--ac),#1d4ed8);color:#fff;box-shadow:0 4px 16px rgba(59,130,246,.35)}
-.btn-s:active{transform:scale(.98);box-shadow:0 2px 8px rgba(59,130,246,.2)}
+.btn-s:active{transform:scale(.98)}
 .btn-s:disabled{opacity:.45;cursor:not-allowed;transform:none}
 
-/* ─── ローディング / トースト ────────────────────── */
-.lov{
-  display:none;position:fixed;inset:0;background:rgba(3,6,12,.85);
-  z-index:900;flex-direction:column;align-items:center;
-  justify-content:center;gap:14px;
-  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
-}
+/* ═══════════════════════════════════════════════
+   ローディング / トースト
+═══════════════════════════════════════════════ */
+.lov{display:none;position:fixed;inset:0;background:rgba(3,6,12,.85);z-index:900;flex-direction:column;align-items:center;justify-content:center;gap:14px;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
 .lov.on{display:flex}
-.spin{
-  width:44px;height:44px;border:3px solid var(--bd);
-  border-top-color:var(--ac);border-radius:50%;
-  animation:spin .7s linear infinite;
-}
+.spin{width:44px;height:44px;border:3px solid var(--bd);border-top-color:var(--ac);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .ltxt{color:var(--t2);font-size:11px;letter-spacing:2px}
-.toast{
-  position:fixed;bottom:24px;left:50%;
-  transform:translateX(-50%) translateY(20px);
-  background:var(--s2);color:var(--t1);
-  padding:10px 20px;border-radius:20px;border:1px solid var(--bd);
-  font-size:12px;letter-spacing:.5px;z-index:1000;
-  opacity:0;transition:all .3s cubic-bezier(.22,1,.36,1);
-  pointer-events:none;white-space:nowrap;max-width:90vw;
-  overflow:hidden;text-overflow:ellipsis;
-}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--s2);color:var(--t1);padding:10px 20px;border-radius:20px;border:1px solid var(--bd);font-size:12px;letter-spacing:.5px;z-index:1000;opacity:0;transition:all .3s cubic-bezier(.22,1,.36,1);pointer-events:none;white-space:nowrap;max-width:90vw;overflow:hidden;text-overflow:ellipsis}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.ok{border-color:var(--ag);color:var(--ag)}
 .toast.er{border-color:var(--ar);color:var(--ar)}
+.toast.pu{border-color:#a855f7;color:#c084fc}
 </style>
 </head>
 <body>
 
-<!-- ===== ローディング ===== -->
-<div class="lov on" id="LOV">
-  <div class="spin"></div>
-  <div class="ltxt" id="LOV_TXT">LOADING...</div>
-</div>
-
-<!-- ===== トースト ===== -->
+<!-- ═══ ローディング ═══ -->
+<div class="lov on" id="LOV"><div class="spin"></div><div class="ltxt" id="LOV_TXT">LOADING...</div></div>
+<!-- ═══ トースト ═══ -->
 <div class="toast" id="TOAST"></div>
 
-<!-- ===== GAS URL設定バナー ===== -->
-<div id="CONFIG_BANNER" style="display:none">
+<!-- ═══════════════════════════════════════════
+     パスワード画面
+═══════════════════════════════════════════ -->
+<div id="PW_SCREEN">
+  <div class="pw-emblem">🏛</div>
+  <div class="pw-title">National Operation System</div>
+  <div class="pw-subtitle">運営管理ポータル</div>
+  <div class="pw-box">
+    <div class="pw-label">運営パスワード</div>
+    <div class="pw-input-wrap" id="PW_WRAP">
+      <input type="password" id="PW_IN" placeholder="パスワードを入力"
+        maxlength="20" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter')checkPW()">
+      <button class="pw-eye" onclick="togglePWEye()" id="PW_EYE">👁</button>
+    </div>
+    <div class="pw-err" id="PW_ERR"></div>
+    <button class="pw-btn" onclick="checkPW()">▶ ログイン</button>
+    <div class="pw-hint">このシステムは運営専用です</div>
+  </div>
+</div>
+
+<!-- ═══ GAS URL バナー ═══ -->
+<div id="CONFIG_BANNER">
   <span>⚠ GAS URL:</span>
-  <input type="text" id="URL_INPUT" placeholder="https://script.google.com/macros/s/xxxxxxx/exec を貼り付けて保存">
+  <input type="text" id="URL_INPUT" placeholder="https://script.google.com/macros/s/xxxxxxx/exec">
   <button onclick="saveUrl()">保存して読込</button>
 </div>
 
-<!-- ===== ヘッダー ===== -->
+<!-- ═══ ヘッダー ═══ -->
 <div class="hdr">
   <div class="hdr-l">
     <div class="hdr-ico">🗺</div>
@@ -314,12 +383,12 @@ body{
   </div>
 </div>
 
-<!-- ===== マップ ===== -->
+<!-- ═══ マップ ═══ -->
 <div class="map-wrap">
   <div class="map-lbl">TERRITORY MAP</div>
   <div class="map-scroll">
     <div id="svg-wrap">
-     <svg id="wrapper" viewBox="0 0 1400.16 600" preserveAspectRatio="xMinYMin" height="600" width="1400.16" style="background-color: rgb(255, 255, 255);"><metadata>
+      <svg id="wrapper" viewBox="0 0 1400.16 600" preserveAspectRatio="xMinYMin" height="600" width="1400.16" style="background-color: rgb(255, 255, 255);"><metadata>
     <rdf:rdf xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:cc="http://creativecommons.org/ns#" xmlns:dc="http://purl.org/dc/elements/1.1/">
       <cc:work rdf:about="">
         <dc:format>image/svg+xml</dc:format>
@@ -347,14 +416,33 @@ body{
   </div>
 </div>
 
-<!-- ===== モードタブ ===== -->
+<!-- ═══ モードタブ ═══ -->
 <div class="tabs">
-  <button class="tab on" id="TAB_C" onclick="setMode('country')">🏴 国家別</button>
-  <button class="tab"    id="TAB_S" onclick="setMode('stat')">📊 ステータス別</button>
+  <button class="tab on"  id="TAB_C" onclick="setMode('country')">🏴 国家別</button>
+  <button class="tab"     id="TAB_S" onclick="setMode('stat')">📊 ステータス</button>
+  <button class="tab"     id="TAB_F" onclick="setMode('found')">🏗 建国操作</button>
 </div>
 <div class="chips" id="CHIPS"></div>
 
-<!-- ===== ステート一覧 ===== -->
+<!-- ═══ 建国操作バー ═══ -->
+<div id="FOUND_BAR">
+  <div class="fb-title">建国操作</div>
+  <div class="fb-count" id="FB_COUNT">0 選択中</div>
+  <button class="fb-btn fb-selall fb-clear" onclick="toggleSelAll()">全選択</button>
+  <div class="fb-selwrap">
+    <select class="fb-sel" id="FB_CSEL" onchange="updFBPreview()">
+      <option value="">── 国家を選択 ──</option>
+    </select>
+    <span class="fb-sarr">▼</span>
+  </div>
+  <div class="fb-preview" id="FB_PREV"></div>
+  <div class="fb-btns">
+    <button class="fb-btn fb-clear" onclick="clearSelection()">✕ クリア</button>
+    <button class="fb-btn fb-apply" id="FB_APPLY" onclick="applyFounding()" disabled>💾 まとめて保存</button>
+  </div>
+</div>
+
+<!-- ═══ ステート一覧 ═══ -->
 <div class="cnt">
   <div class="sec-hd">STATE LIST</div>
   <div class="srch">
@@ -366,7 +454,7 @@ body{
   <div class="empty" id="EMPTY" style="display:none">─ 一致するステートなし ─</div>
 </div>
 
-<!-- ===== 編集モーダル ===== -->
+<!-- ═══ 編集モーダル（1件） ═══ -->
 <div class="mover" id="MOVER" onclick="handleOvClick(event)">
   <div class="modal">
     <div class="mhandle"><div class="mbar"></div></div>
@@ -379,7 +467,7 @@ body{
       </div>
       <button class="mclose" onclick="closeModal()">✕</button>
     </div>
-    <div class="mbody" id="M_BODY">
+    <div class="mbody">
       <div class="fg">
         <label class="fl">所属国家</label>
         <div class="selwrap">
@@ -400,128 +488,176 @@ body{
 </div>
 
 <script>
+
 var GAS_URL = 'https://script.google.com/macros/s/AKfycbyUpxjvBf5rh_X6rD_96m3u3J-xR_y51Nt_wSvqFQKl36bV5F0GyILpTNjSCvwXgbMq/exec'; 
 
-// LS キー
-var LS_KEY = 'mapctrl_gas_url';
+// ─── 定数 ───────────────────────────────────────────
+var PW      = '03280317';
+var LS_URL  = 'mapctrl_gas_url';
+var LS_AUTH = 'mapctrl_auth';
 
-// ─────── データストア ────────────────────────────────
-var ALL  = [], CNTS = [], HDRS = [], MMX = {};
-var MODE = 'country', CSTAT = null, CSTATE = null;
+// ─── データストア ──────────────────────────────────
+var ALL=[], CNTS=[], HDRS=[], MMX={};
+var MODE='country', CSTAT=null, CSTATE=null;
+var SELECTED = new Set(); // 建国モードで選択中のステート名
 
-// ─────── 起動 ────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', function(){
-  var stored = localStorage.getItem(LS_KEY);
-  if (stored) GAS_URL = stored;
-  if (!GAS_URL || GAS_URL.trim() === '') {
+// ═══════════════════════════════════════════════════════
+//  パスワード認証
+// ═══════════════════════════════════════════════════════
+function checkPW(){
+  var v=document.getElementById('PW_IN').value;
+  var wrap=document.getElementById('PW_WRAP');
+  var err=document.getElementById('PW_ERR');
+  if(v===PW){
+    sessionStorage.setItem(LS_AUTH,'1');
+    document.getElementById('PW_SCREEN').style.display='none';
+    initApp();
+  } else {
+    err.textContent='パスワードが違います';
+    wrap.classList.add('err');
+    document.getElementById('PW_IN').value='';
+    setTimeout(function(){ wrap.classList.remove('err'); err.textContent=''; },800);
+  }
+}
+function togglePWEye(){
+  var inp=document.getElementById('PW_IN'),eye=document.getElementById('PW_EYE');
+  if(inp.type==='password'){ inp.type='text'; eye.textContent='🙈'; }
+  else { inp.type='password'; eye.textContent='👁'; }
+}
+
+// ═══════════════════════════════════════════════════════
+//  起動
+// ═══════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded',function(){
+  hideLoading();
+  // セッション内で認証済みならスキップ
+  if(sessionStorage.getItem(LS_AUTH)==='1'){
+    document.getElementById('PW_SCREEN').style.display='none';
+    initApp();
+  } else {
+    document.getElementById('PW_SCREEN').style.display='flex';
+    setTimeout(function(){ document.getElementById('PW_IN').focus(); },100);
+  }
+});
+
+function initApp(){
+  var stored=localStorage.getItem(LS_URL);
+  if(stored) GAS_URL=stored;
+  if(!GAS_URL||!GAS_URL.trim()){
     showBanner();
-    hideLoading();
     return;
   }
   loadData();
-});
+}
 
-// ─────── URLバナー ────────────────────────────────────
+// ─── URLバナー ─────────────────────────────────────
 function showBanner(){
-  document.getElementById('CONFIG_BANNER').style.display = 'flex';
-  var inp = document.getElementById('URL_INPUT');
-  inp.value = GAS_URL || '';
+  var b=document.getElementById('CONFIG_BANNER');
+  b.style.display='flex';
+  document.getElementById('URL_INPUT').value=GAS_URL||'';
   setStatus('er','URL未設定');
 }
 function saveUrl(){
-  var v = document.getElementById('URL_INPUT').value.trim();
-  if (!v){ toast('URLを入力してください','er'); return; }
-  GAS_URL = v;
-  localStorage.setItem(LS_KEY, v);
-  document.getElementById('CONFIG_BANNER').style.display = 'none';
+  var v=document.getElementById('URL_INPUT').value.trim();
+  if(!v){ toast('URLを入力してください','er'); return; }
+  GAS_URL=v; localStorage.setItem(LS_URL,v);
+  document.getElementById('CONFIG_BANNER').style.display='none';
   loadData();
 }
 
-// ─────── データ取得 ───────────────────────────────────
+// ═══════════════════════════════════════════════════════
+//  データ取得
+// ═══════════════════════════════════════════════════════
 function loadData(){
-  setStatus('ld','読込中');
-  showLoading('LOADING DATA...');
-  fetch(GAS_URL + '?action=getData')
-    .then(function(r){ return r.json(); })
-    .then(function(d){ onLoaded(d); })
-    .catch(function(e){ hideLoading(); setStatus('er','ERROR'); toast('通信エラー: '+e,'er'); });
+  setStatus('ld','読込中'); showLoading('LOADING DATA...');
+  fetch(GAS_URL+'?action=getData')
+    .then(function(r){return r.json();})
+    .then(function(d){onLoaded(d);})
+    .catch(function(e){hideLoading();setStatus('er','ERROR');toast('通信エラー: '+e,'er');});
 }
 
 function onLoaded(d){
   hideLoading();
-  if(!d||!d.success){ setStatus('er','ERROR'); toast(d?d.error:'不明なエラー','er'); return; }
-  ALL  = d.states   || [];
-  CNTS = d.countries|| [];
-  HDRS = d.statHeaders || [];
+  if(!d||!d.success){setStatus('er','ERROR');toast(d?d.error:'不明なエラー','er');return;}
+  ALL=d.states||[]; CNTS=d.countries||[]; HDRS=d.statHeaders||[];
   calcMMX();
   buildChips();
+  buildFBOptions();
   buildCntOptions();
   buildCards(ALL);
   applyColors();
   setupSVG();
-  setStatus('ok', ALL.length+' STATES');
+  setStatus('ok',ALL.length+' STATES');
   toast('データ読込完了','ok');
 }
 
-// ─────── min/max計算 ─────────────────────────────────
+// ─── min/max ────────────────────────────────────────
 function calcMMX(){
-  MMX = {};
+  MMX={};
   HDRS.forEach(function(h){
     var mn=Infinity,mx=-Infinity;
-    ALL.forEach(function(s){ var v=num(s.stats[h]); if(v<mn)mn=v; if(v>mx)mx=v; });
-    MMX[h]={min:mn===Infinity?0:mn, max:mx===-Infinity?0:mx};
+    ALL.forEach(function(s){var v=num(s.stats[h]);if(v<mn)mn=v;if(v>mx)mx=v;});
+    MMX[h]={min:mn===Infinity?0:mn,max:mx===-Infinity?0:mx};
   });
 }
 
-// ─────── ヒートカラー ─────────────────────────────────
+// ─── ヒートカラー ────────────────────────────────────
 function heatColor(val,hdr){
-  var mm=MMX[hdr]; if(!mm||mm.min===mm.max) return '#334455';
+  var mm=MMX[hdr];if(!mm||mm.min===mm.max)return '#334455';
   var r=clamp01((val-mm.min)/(mm.max-mm.min));
   return 'hsl('+Math.round(r*120)+',75%,'+(38+r*12)+'%)';
 }
-function heatRatio(r){ return 'hsl('+Math.round(clamp01(r)*120)+',75%,44%)'; }
-function clamp01(v){ return Math.max(0,Math.min(1,v)); }
-function num(v){ return (v===''||v==null)?0:(Number(v)||0); }
+function heatRatio(r){return 'hsl('+Math.round(clamp01(r)*120)+',75%,44%)';}
+function clamp01(v){return Math.max(0,Math.min(1,v));}
+function num(v){return(v===''||v==null)?0:(Number(v)||0);}
 
-// ─────── SVG カラー適用 ───────────────────────────────
+// ═══════════════════════════════════════════════════════
+//  SVG カラー適用 & クリック
+// ═══════════════════════════════════════════════════════
 function applyColors(){
   document.querySelectorAll('#svg-wrap path').forEach(function(el){
-    var n=pname(el); if(!n) return;
-    var s=fState(n); if(!s) return;
+    var n=pname(el);if(!n)return;
+    var s=fState(n);if(!s)return;
     var col;
     if(MODE==='country'){
-      var c=fCnt(s.country); col=c?c.color:'#1e2d45';
-    } else {
+      var c=fCnt(s.country);col=c?c.color:'#1e2d45';
+    } else if(MODE==='stat'){
       col=CSTAT?heatColor(num(s.stats[CSTAT]),CSTAT):'#1e2d45';
+    } else { // found
+      var c2=fCnt(s.country);col=c2?c2.color:'#1e2d45';
     }
     el.setAttribute('fill',col);
+    // 建国選択ハイライト
+    if(SELECTED.has(norm(s.name))){el.classList.add('sel-path');}
+    else{el.classList.remove('sel-path');}
   });
 }
 
-// pathから名前を取る
 function pname(el){
-  var t=el.querySelector('title'); if(t&&t.textContent.trim()) return t.textContent.trim();
-  var dn=el.getAttribute('data-name'); if(dn&&dn.trim()) return dn.trim();
-  var id=el.id; if(id&&!/^(map|wrapper|map-group)$/.test(id)) return id;
+  var t=el.querySelector('title');if(t&&t.textContent.trim())return t.textContent.trim();
+  var dn=el.getAttribute('data-name');if(dn&&dn.trim())return dn.trim();
+  var id=el.id;if(id&&!/^(map|wrapper|map-group)$/.test(id))return id;
   var p=el.parentElement;
   if(p){
-    var pt=p.querySelector(':scope > title'); if(pt&&pt.textContent) return pt.textContent.trim();
-    if(p.id&&!/^(map|wrapper|map-group)$/.test(p.id)) return p.id;
+    var pt=p.querySelector(':scope > title');if(pt&&pt.textContent)return pt.textContent.trim();
+    if(p.id&&!/^(map|wrapper|map-group)$/.test(p.id))return p.id;
   }
   return null;
 }
 
-// SVGクリック設定
 function setupSVG(){
   document.querySelectorAll('#svg-wrap path').forEach(function(el){
     el.style.cursor='pointer';
     el.addEventListener('click',function(e){
       e.stopPropagation();
-      var n=pname(el); if(!n) return;
+      var n=pname(el);if(!n)return;
       var s=fState(n);
-      if(!s){ toast('"'+n+'" はリストにありません','er'); return; }
-      hlPath(el);
-      openModal(s);
+      if(!s){toast('"'+n+'" はリストにありません','er');return;}
+      if(MODE==='found'){
+        toggleStateSelect(s.name);
+      } else {
+        hlPath(el); openModal(s);
+      }
     });
   });
 }
@@ -529,80 +665,212 @@ function setupSVG(){
 var _hlEl=null,_hlStroke='',_hlSW='';
 function hlPath(el){
   clearHL();
-  _hlEl=el; _hlStroke=el.getAttribute('stroke')||''; _hlSW=el.getAttribute('stroke-width')||'';
-  el.setAttribute('stroke','#fff'); el.setAttribute('stroke-width','2');
+  _hlEl=el;_hlStroke=el.getAttribute('stroke')||'';_hlSW=el.getAttribute('stroke-width')||'';
+  el.setAttribute('stroke','#fff');el.setAttribute('stroke-width','2');
 }
 function clearHL(){
-  if(_hlEl){ _hlEl.setAttribute('stroke',_hlStroke); _hlEl.setAttribute('stroke-width',_hlSW); _hlEl=null; }
+  if(_hlEl){_hlEl.setAttribute('stroke',_hlStroke);_hlEl.setAttribute('stroke-width',_hlSW);_hlEl=null;}
 }
 function hlByName(n){
   clearHL();
   document.querySelectorAll('#svg-wrap path').forEach(function(el){
-    if(norm(pname(el))===norm(n)){ hlPath(el); }
+    if(norm(pname(el))===norm(n))hlPath(el);
   });
 }
 
-// ─────── マップモード ─────────────────────────────────
+// ═══════════════════════════════════════════════════════
+//  マップモード
+// ═══════════════════════════════════════════════════════
 function setMode(m){
   MODE=m;
-  document.getElementById('TAB_C').classList.toggle('on',m==='country');
-  document.getElementById('TAB_S').classList.toggle('on',m==='stat');
+  document.getElementById('TAB_C').className='tab'+(m==='country'?' on':'');
+  document.getElementById('TAB_S').className='tab'+(m==='stat'?' on':'');
+  document.getElementById('TAB_F').className='tab'+(m==='found'?' on-f':'');
   document.getElementById('CHIPS').classList.toggle('on',m==='stat');
-  if(m==='stat'&&!CSTAT&&HDRS.length){ CSTAT=HDRS[0]; updChips(); }
+  document.getElementById('FOUND_BAR').classList.toggle('on',m==='found');
+  document.getElementById('GRID').classList.toggle('found-mode',m==='found');
+  clearHL();
+  if(m!=='found'){clearSelection();}
+  if(m==='stat'&&!CSTAT&&HDRS.length){CSTAT=HDRS[0];updChips();}
   applyColors();
 }
 
 function buildChips(){
-  var bar=document.getElementById('CHIPS'); bar.innerHTML='';
-  if(!HDRS.length) return;
+  var bar=document.getElementById('CHIPS');bar.innerHTML='';
+  if(!HDRS.length)return;
   CSTAT=HDRS[0];
   HDRS.forEach(function(h){
     var b=document.createElement('button');
     b.className='chip'+(h===CSTAT?' on':'');
-    b.textContent=h; b.dataset.h=h;
-    b.onclick=function(){ CSTAT=h; updChips(); applyColors(); };
+    b.textContent=h;b.dataset.h=h;
+    b.onclick=function(){CSTAT=h;updChips();applyColors();};
     bar.appendChild(b);
   });
 }
-function updChips(){
-  document.querySelectorAll('.chip').forEach(function(c){ c.classList.toggle('on',c.dataset.h===CSTAT); });
+function updChips(){document.querySelectorAll('.chip').forEach(function(c){c.classList.toggle('on',c.dataset.h===CSTAT);});}
+
+// ═══════════════════════════════════════════════════════
+//  建国操作 ─ 複数選択
+// ═══════════════════════════════════════════════════════
+function buildFBOptions(){
+  var sel=document.getElementById('FB_CSEL');
+  sel.innerHTML='<option value="">── 国家を選択 ──</option>';
+  CNTS.forEach(function(c){
+    var o=document.createElement('option');
+    o.value=c.name;o.textContent=c.name;sel.appendChild(o);
+  });
+}
+function updFBPreview(){
+  var v=document.getElementById('FB_CSEL').value;
+  var c=fCnt(v);
+  document.getElementById('FB_PREV').style.background=c?c.color:'transparent';
+  var btn=document.getElementById('FB_APPLY');
+  btn.disabled=!(v&&SELECTED.size>0);
+}
+function updFBCount(){
+  document.getElementById('FB_COUNT').textContent=SELECTED.size+' 選択中';
+  var v=document.getElementById('FB_CSEL').value;
+  document.getElementById('FB_APPLY').disabled=!(v&&SELECTED.size>0);
 }
 
-// ─────── カードグリッド ───────────────────────────────
+// ステートの選択トグル
+function toggleStateSelect(name){
+  var key=norm(name);
+  if(SELECTED.has(key)){SELECTED.delete(key);}
+  else{SELECTED.add(key);}
+  updFBCount();
+  applyColors();
+  // カードの見た目も更新
+  document.querySelectorAll('.card').forEach(function(card){
+    if(card.dataset.state===key){
+      card.classList.toggle('sel-card',SELECTED.has(key));
+      var ck=card.querySelector('.card-ck');
+      if(ck)ck.textContent=SELECTED.has(key)?'✓':'';
+    }
+  });
+}
+
+var _allSelected=false;
+function toggleSelAll(){
+  var btn=document.querySelector('.fb-selall');
+  var visible=Array.from(document.querySelectorAll('.card')).map(function(c){return c.dataset.state;}).filter(Boolean);
+  var allOn=visible.every(function(k){return SELECTED.has(k);});
+  if(allOn){
+    visible.forEach(function(k){SELECTED.delete(k);});
+    btn.textContent='全選択';
+  } else {
+    visible.forEach(function(k){SELECTED.add(k);});
+    btn.textContent='全解除';
+  }
+  updFBCount();
+  applyColors();
+  buildCards(currentList());
+}
+
+function clearSelection(){
+  SELECTED.clear();
+  updFBCount();
+  applyColors();
+  buildCards(currentList());
+  document.querySelector('.fb-selall').textContent='全選択';
+}
+
+function currentList(){
+  var q=norm(document.getElementById('SEARCH').value);
+  return ALL.filter(function(s){return norm(s.name).includes(q)||norm(s.country||'').includes(q);});
+}
+
+// ═══════════════════════════════════════════════════════
+//  建国操作 ─ まとめて保存
+// ═══════════════════════════════════════════════════════
+function applyFounding(){
+  var cname=document.getElementById('FB_CSEL').value;
+  if(!cname){toast('国家を選択してください','er');return;}
+  if(!SELECTED.size){toast('ステートを選択してください','er');return;}
+
+  var items=[];
+  SELECTED.forEach(function(key){
+    var s=ALL.find(function(x){return norm(x.name)===key;});
+    if(s)items.push({stateName:s.name,countryName:cname});
+  });
+  if(!items.length)return;
+
+  var btn=document.getElementById('FB_APPLY');
+  btn.disabled=true;btn.textContent='SAVING...';
+  showLoading('BATCH SAVING '+items.length+' STATES...');
+
+  var url=GAS_URL+'?action=saveBatch&items='+encodeURIComponent(JSON.stringify(items));
+  fetch(url)
+    .then(function(r){return r.json();})
+    .then(function(d){
+      hideLoading();btn.disabled=false;btn.textContent='💾 まとめて保存';
+      if(d&&d.success){
+        // ローカル反映
+        items.forEach(function(it){
+          var s=fState(it.stateName);if(s)s.country=cname;
+        });
+        applyColors();
+        buildCards(currentList());
+        var msg='✓ '+d.saved+'件を「'+cname+'」に登録しました';
+        if(d.notFound&&d.notFound.length)msg+=' (未発見:'+d.notFound.join(',')+ ')';
+        toast(msg,'pu');
+        clearSelection();
+      } else {
+        toast('保存エラー: '+(d?d.error:'不明'),'er');
+      }
+    })
+    .catch(function(e){
+      hideLoading();btn.disabled=false;btn.textContent='💾 まとめて保存';
+      toast('通信エラー: '+e,'er');
+    });
+}
+
+// ═══════════════════════════════════════════════════════
+//  カードグリッド
+// ═══════════════════════════════════════════════════════
 function buildCntOptions(){
   var sel=document.getElementById('M_CSEL');
   sel.innerHTML='<option value="">── 未所属 ──</option>';
   CNTS.forEach(function(c){
     var o=document.createElement('option');
-    o.value=c.name; o.textContent=c.name; sel.appendChild(o);
+    o.value=c.name;o.textContent=c.name;sel.appendChild(o);
   });
 }
 
 function buildCards(list){
   var g=document.getElementById('GRID'),e=document.getElementById('EMPTY');
   g.innerHTML='';
-  if(!list.length){ e.style.display='block'; return; }
+  if(!list.length){e.style.display='block';return;}
   e.style.display='none';
   list.forEach(function(s){
     var c=fCnt(s.country),col=c?c.color:'#1e2d45';
+    var key=norm(s.name);
+    var isSel=SELECTED.has(key);
     var d=document.createElement('div');
-    d.className='card';
-    d.innerHTML='<div class="swatch" style="background:'+esc(col)+'"></div>'+
+    d.className='card'+(isSel?' sel-card':'');
+    d.dataset.state=key;
+    d.innerHTML=
+      '<div class="card-ck">'+(isSel?'✓':'')+'</div>'+
+      '<div class="swatch" style="background:'+esc(col)+'"></div>'+
       '<div class="cinfo">'+
         '<div class="cname">'+esc(s.name)+'</div>'+
         '<div class="ccountry">'+esc(s.country||'未所属')+'</div>'+
       '</div><div class="carr">›</div>';
-    d.onclick=function(){ hlByName(s.name); openModal(s); };
+    d.onclick=function(){
+      if(MODE==='found'){toggleStateSelect(s.name);}
+      else{hlByName(s.name);openModal(s);}
+    };
     g.appendChild(d);
   });
 }
 
 function filterCards(){
-  var q=norm(document.getElementById('SEARCH').value);
-  buildCards(ALL.filter(function(s){ return norm(s.name).includes(q)||norm(s.country||'').includes(q); }));
+  buildCards(currentList());
 }
 
-// ─────── モーダル ─────────────────────────────────────
+// ═══════════════════════════════════════════════════════
+//  1件編集モーダル
+// ═══════════════════════════════════════════════════════
 function openModal(s){
   CSTATE=s;
   var c=fCnt(s.country),col=c?c.color:'#1e2d45';
@@ -610,17 +878,14 @@ function openModal(s){
   document.getElementById('M_SUB').textContent=s.country||'未所属';
   document.getElementById('M_CBAR').style.background=col;
   document.getElementById('M_CSEL').value=s.country||'';
-  updCPreview();
-  buildStats(s);
+  updCPreview();buildStats(s);
   document.getElementById('MOVER').classList.add('on');
 }
-function closeModal(){ document.getElementById('MOVER').classList.remove('on'); clearHL(); CSTATE=null; }
-function handleOvClick(e){ if(e.target===document.getElementById('MOVER')) closeModal(); }
-
+function closeModal(){document.getElementById('MOVER').classList.remove('on');clearHL();CSTATE=null;}
+function handleOvClick(e){if(e.target===document.getElementById('MOVER'))closeModal();}
 function onCntChange(){
   updCPreview();
-  var v=document.getElementById('M_CSEL').value;
-  var c=fCnt(v);
+  var v=document.getElementById('M_CSEL').value,c=fCnt(v);
   document.getElementById('M_CBAR').style.background=c?c.color:'#1e2d45';
   document.getElementById('M_SUB').textContent=v||'未所属';
 }
@@ -629,127 +894,65 @@ function updCPreview(){
   document.getElementById('M_CPREV').style.background=c?c.color:'transparent';
 }
 
-// ─────── ステータスUI ─────────────────────────────────
+// ─── ステータスUI ───────────────────────────────────
 function buildStats(s){
-  var ct=document.getElementById('M_STATS'); ct.innerHTML='';
-  if(!HDRS.length){
-    ct.innerHTML='<div style="color:var(--t3);font-size:11px;letter-spacing:1px">ステータス列がありません</div>';
-    return;
-  }
-  var th=document.createElement('div');
-  th.className='stath'; th.textContent='STATISTICS'; ct.appendChild(th);
-
+  var ct=document.getElementById('M_STATS');ct.innerHTML='';
+  if(!HDRS.length){ct.innerHTML='<div style="color:var(--t3);font-size:11px;letter-spacing:1px">ステータス列がありません</div>';return;}
+  var th=document.createElement('div');th.className='stath';th.textContent='STATISTICS';ct.appendChild(th);
   HDRS.forEach(function(h,i){
-    var val=num(s.stats[h]);
-    var mm=MMX[h]||{min:0,max:100};
-    var smin=mm.min, smax=mm.max===mm.min?mm.max+100:mm.max;
+    var val=num(s.stats[h]),mm=MMX[h]||{min:0,max:100};
+    var smin=mm.min,smax=mm.max===mm.min?mm.max+100:mm.max;
     var ratio=clamp01((val-smin)/(smax-smin));
     var pct=Math.round(ratio*100);
     var step=(smax-smin>10000)?10:(smax-smin>1000)?1:(smax-smin>100)?.5:.1;
-
-    var r=document.createElement('div'); r.className='srow';
-    r.innerHTML=
-      '<div class="stop">'+
-        '<span class="skey">'+esc(h)+'</span>'+
-        '<input type="number" class="snum" id="sn_'+i+'" value="'+val+'" step="'+step+'"'+
-          ' oninput="onNum('+i+',\''+escj(h)+'\')">'+
-      '</div>'+
-      '<input type="range" class="sslide" id="ss_'+i+'"'+
-        ' min="'+smin+'" max="'+smax+'" step="'+step+'" value="'+val+'"'+
-        ' style="background:'+slGrad(ratio)+'"'+
-        ' oninput="onSlide('+i+',\''+escj(h)+'\')">'+
+    var r=document.createElement('div');r.className='srow';
+    r.innerHTML='<div class="stop"><span class="skey">'+esc(h)+'</span>'+
+      '<input type="number" class="snum" id="sn_'+i+'" value="'+val+'" step="'+step+'" oninput="onNum('+i+',\''+escj(h)+'\')">'+
+      '</div><input type="range" class="sslide" id="ss_'+i+'" min="'+smin+'" max="'+smax+'" step="'+step+'" value="'+val+'"'+
+      ' style="background:'+slGrad(ratio)+'" oninput="onSlide('+i+',\''+escj(h)+'\')">'+
       '<div class="strk"><div class="sind" id="si_'+i+'" style="left:'+pct+'%;background:'+heatRatio(ratio)+'"></div></div>';
     ct.appendChild(r);
   });
 }
 
-function slGrad(r){
-  var p=Math.round(r*100),c=heatRatio(r);
-  return 'linear-gradient(90deg,'+c+' 0%,'+c+' '+p+'%,var(--s3) '+p+'%,var(--s3) 100%)';
-}
+function slGrad(r){var p=Math.round(r*100),c=heatRatio(r);return 'linear-gradient(90deg,'+c+' 0%,'+c+' '+p+'%,var(--s3) '+p+'%,var(--s3) 100%)';}
+function onSlide(i,h){var sl=document.getElementById('ss_'+i),ni=document.getElementById('sn_'+i);var v=parseFloat(sl.value);ni.value=v;updInd(i,h,v,parseFloat(sl.min),parseFloat(sl.max));}
+function onNum(i,h){var ni=document.getElementById('sn_'+i),sl=document.getElementById('ss_'+i);var v=parseFloat(ni.value)||0;if(sl){if(v<parseFloat(sl.min))sl.min=v;if(v>parseFloat(sl.max))sl.max=v;sl.value=v;}updInd(i,h,v,parseFloat(sl.min),parseFloat(sl.max));}
+function updInd(i,h,v,mn,mx){var sl=document.getElementById('ss_'+i),ind=document.getElementById('si_'+i);if(!sl||!ind)return;var r=clamp01((v-mn)/(mx-mn||1)),pct=Math.round(r*100);ind.style.left=pct+'%';ind.style.background=heatRatio(r);sl.style.background=slGrad(r);}
 
-function onSlide(i,h){
-  var sl=document.getElementById('ss_'+i),ni=document.getElementById('sn_'+i);
-  var v=parseFloat(sl.value); ni.value=v;
-  updInd(i,h,v,parseFloat(sl.min),parseFloat(sl.max));
-}
-function onNum(i,h){
-  var ni=document.getElementById('sn_'+i),sl=document.getElementById('ss_'+i);
-  var v=parseFloat(ni.value)||0;
-  if(sl){ if(v<parseFloat(sl.min))sl.min=v; if(v>parseFloat(sl.max))sl.max=v; sl.value=v; }
-  updInd(i,h,v,parseFloat(sl.min),parseFloat(sl.max));
-}
-function updInd(i,h,v,mn,mx){
-  var sl=document.getElementById('ss_'+i),ind=document.getElementById('si_'+i);
-  if(!sl||!ind) return;
-  var r=clamp01((v-mn)/(mx-mn||1)),pct=Math.round(r*100);
-  ind.style.left=pct+'%'; ind.style.background=heatRatio(r);
-  sl.style.background=slGrad(r);
-}
-
-// ─────── 保存 ─────────────────────────────────────────
+// ─── 1件保存 ─────────────────────────────────────────
 function doSave(){
-  if(!CSTATE) return;
-  var sname  =CSTATE.name;
-  var cname  =document.getElementById('M_CSEL').value;
-  var stats  ={};
-  HDRS.forEach(function(h,i){
-    var el=document.getElementById('sn_'+i);
-    stats[h]=el?parseFloat(el.value)||0:0;
-  });
-
-  var btn=document.getElementById('M_SAVE');
-  btn.disabled=true; btn.textContent='SAVING...';
+  if(!CSTATE)return;
+  var sname=CSTATE.name,cname=document.getElementById('M_CSEL').value,stats={};
+  HDRS.forEach(function(h,i){var el=document.getElementById('sn_'+i);stats[h]=el?parseFloat(el.value)||0:0;});
+  var btn=document.getElementById('M_SAVE');btn.disabled=true;btn.textContent='SAVING...';
   showLoading('SAVING...');
-
-  var url=GAS_URL+'?action=save'+
-    '&stateName='+encodeURIComponent(sname)+
-    '&countryName='+encodeURIComponent(cname)+
-    '&stats='+encodeURIComponent(JSON.stringify(stats));
-
+  var url=GAS_URL+'?action=save&stateName='+encodeURIComponent(sname)+'&countryName='+encodeURIComponent(cname)+'&stats='+encodeURIComponent(JSON.stringify(stats));
   fetch(url)
-    .then(function(r){ return r.json(); })
+    .then(function(r){return r.json();})
     .then(function(d){
-      hideLoading(); btn.disabled=false; btn.textContent='💾 SAVE';
+      hideLoading();btn.disabled=false;btn.textContent='💾 SAVE';
       if(d&&d.success){
-        var s=fState(sname);
-        if(s){ s.country=cname; Object.assign(s.stats,stats); }
-        calcMMX(); applyColors(); buildCards(ALL);
-        closeModal(); toast('✓ 保存しました','ok');
-      } else {
-        toast('保存エラー: '+(d?d.error:'不明'),'er');
-      }
+        var s=fState(sname);if(s){s.country=cname;Object.assign(s.stats,stats);}
+        calcMMX();applyColors();buildCards(ALL);closeModal();toast('✓ 保存しました','ok');
+      } else {toast('保存エラー: '+(d?d.error:'不明'),'er');}
     })
-    .catch(function(e){
-      hideLoading(); btn.disabled=false; btn.textContent='💾 SAVE';
-      toast('通信エラー: '+e,'er');
-    });
+    .catch(function(e){hideLoading();btn.disabled=false;btn.textContent='💾 SAVE';toast('通信エラー: '+e,'er');});
 }
 
-// ─────── ユーティリティ ───────────────────────────────
-function fState(n){ var nn=norm(n); return ALL.find(function(s){ return norm(s.name)===nn; })||null; }
-function fCnt(n){ if(!n) return null; var nn=norm(n); return CNTS.find(function(c){ return norm(c.name)===nn; })||null; }
-function norm(s){ return String(s||'').trim().toLowerCase(); }
-function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function escj(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"'); }
-
-function setStatus(t,txt){
-  var d=document.getElementById('SDOT');
-  d.className='sdot'+(t==='ld'?' ld':t==='er'?' er':'');
-  document.getElementById('STXT').textContent=txt;
-}
-function showLoading(t){
-  document.getElementById('LOV_TXT').textContent=t||'LOADING...';
-  document.getElementById('LOV').classList.add('on');
-}
-function hideLoading(){ document.getElementById('LOV').classList.remove('on'); }
-
+// ═══════════════════════════════════════════════════════
+//  ユーティリティ
+// ═══════════════════════════════════════════════════════
+function fState(n){var nn=norm(n);return ALL.find(function(s){return norm(s.name)===nn;})||null;}
+function fCnt(n){if(!n)return null;var nn=norm(n);return CNTS.find(function(c){return norm(c.name)===nn;})||null;}
+function norm(s){return String(s||'').trim().toLowerCase();}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function escj(s){return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"');}
+function setStatus(t,txt){var d=document.getElementById('SDOT');d.className='sdot'+(t==='ld'?' ld':t==='er'?' er':'');document.getElementById('STXT').textContent=txt;}
+function showLoading(t){document.getElementById('LOV_TXT').textContent=t||'LOADING...';document.getElementById('LOV').classList.add('on');}
+function hideLoading(){document.getElementById('LOV').classList.remove('on');}
 var _tt;
-function toast(msg,type){
-  var el=document.getElementById('TOAST');
-  el.textContent=msg; el.className='toast on '+(type||'');
-  clearTimeout(_tt); _tt=setTimeout(function(){ el.className='toast'; },3000);
-}
+function toast(msg,type){var el=document.getElementById('TOAST');el.textContent=msg;el.className='toast on '+(type||'');clearTimeout(_tt);_tt=setTimeout(function(){el.className='toast';},3500);}
 </script>
 </body>
 </html>
