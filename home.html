@@ -5,20 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>国家運営ポータル</title>
 <style>
-/* ════════════════════════════════════════════════════
-   リセット & CSS変数
-════════════════════════════════════════════════════ */
+/* ================================================
+   リセット & 変数
+================================================ */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#07090f;
-  --s1:#0d1220cc;--s2:#121a2ccc;--s3:#192236;
-  --s1s:#0d1220;--s2s:#121a2c;
+  --s1:#0d1220;--s2:#121a2c;--s3:#192236;
   --bd:#1e2d45;--bd2:#152035;
   --t1:#c8d8f0;--t2:#607898;--t3:#2e4260;
   --ac:#3b82f6;--ag:#10b981;--ar:#ef4444;--ay:#f59e0b;
-  --r:12px;--rl:18px;
-  /* ユーザーアクセントカラー（ログイン後にJSで上書き） */
-  --uc:#3b82f6;--uc2:#1d4ed8;
+  --uc:#3b82f6;--uc2:#1d4ed8; /* ログイン後に上書き */
+  --r:10px;--rl:16px;
 }
 html,body{height:100%;overflow-x:hidden}
 body{
@@ -27,36 +25,42 @@ body{
   font-size:14px;min-height:100vh;
 }
 
-/* ════════════════════════════════════════════════════
-   背景
-════════════════════════════════════════════════════ */
+/* 背景 */
 #BG{
   position:fixed;inset:0;z-index:0;
   background:url('home.jpg') center/cover no-repeat;
 }
 #BG::after{
   content:'';position:absolute;inset:0;
-  background:linear-gradient(180deg,rgba(4,7,14,.82) 0%,rgba(4,7,14,.68) 40%,rgba(4,7,14,.88) 100%);
+  background:linear-gradient(180deg,rgba(4,7,14,.86) 0%,rgba(4,7,14,.72) 40%,rgba(4,7,14,.9) 100%);
 }
 
-/* ════════════════════════════════════════════════════
+/* ================================================
    ローディング / トースト
-════════════════════════════════════════════════════ */
-.lov{display:none;position:fixed;inset:0;background:rgba(3,6,12,.88);z-index:2000;
+================================================ */
+.lov{
+  display:none;position:fixed;inset:0;background:rgba(3,6,12,.88);z-index:2000;
   flex-direction:column;align-items:center;justify-content:center;gap:14px;
-  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+}
 .lov.on{display:flex}
-.spin{width:44px;height:44px;border:3px solid #1e2d45;border-top-color:var(--uc);border-radius:50%;animation:spin .7s linear infinite}
+.spin{
+  width:44px;height:44px;border:3px solid var(--bd);
+  border-top-color:var(--uc);border-radius:50%;
+  animation:spin .7s linear infinite;
+}
 @keyframes spin{to{transform:rotate(360deg)}}
 .ltxt{color:var(--t2);font-size:11px;letter-spacing:2px}
+
 .toast{
   position:fixed;bottom:24px;left:50%;
   transform:translateX(-50%) translateY(20px);
-  background:#0d1220ee;color:var(--t1);
+  background:rgba(13,18,32,.95);color:var(--t1);
   padding:11px 22px;border-radius:24px;border:1px solid var(--bd);
-  font-size:13px;letter-spacing:.4px;z-index:3000;
-  opacity:0;transition:all .32s cubic-bezier(.22,1,.36,1);
-  pointer-events:none;white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis;
+  font-size:13px;letter-spacing:.3px;z-index:3000;
+  opacity:0;transition:all .3s cubic-bezier(.22,1,.36,1);
+  pointer-events:none;white-space:nowrap;max-width:92vw;
+  overflow:hidden;text-overflow:ellipsis;
   backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
 }
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -64,183 +68,217 @@ body{
 .toast.er{border-color:var(--ar);color:var(--ar)}
 .toast.wa{border-color:var(--ay);color:var(--ay)}
 
-/* ════════════════════════════════════════════════════
+/* ================================================
    ログイン画面
-════════════════════════════════════════════════════ */
+================================================ */
 #LOGIN_SCREEN{
   position:fixed;inset:0;z-index:1500;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:20px;
-  background:radial-gradient(ellipse at 50% 35%,rgba(10,18,42,.6) 0%,rgba(4,7,14,.5) 100%);
-  backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);
 }
 
-.login-logo{
-  font-size:60px;margin-bottom:12px;
-  animation:logo-float 3.5s ease-in-out infinite;
-  filter:drop-shadow(0 0 28px rgba(59,130,246,.55));
+.login-mark{
+  width:56px;height:56px;border-radius:12px;
+  background:linear-gradient(135deg,var(--uc),var(--uc2));
+  display:flex;align-items:center;justify-content:center;
+  font-size:0; /* アイコン代わりの四角形 */
+  margin-bottom:18px;
+  box-shadow:0 0 32px rgba(59,130,246,.45);
+  animation:mark-pulse 3s ease-in-out infinite;
+  position:relative;
 }
-@keyframes logo-float{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-10px) rotate(2deg)}}
+/* 十字マーク（テキスト＋擬似要素で代替） */
+.login-mark::before,.login-mark::after{
+  content:'';position:absolute;background:#fff;border-radius:2px;
+}
+.login-mark::before{width:24px;height:3px}
+.login-mark::after{width:3px;height:24px}
+@keyframes mark-pulse{0%,100%{box-shadow:0 0 32px rgba(59,130,246,.45)}50%{box-shadow:0 0 52px rgba(59,130,246,.7)}}
 
-.login-nation{font-size:10px;color:var(--t2);letter-spacing:4px;text-transform:uppercase;margin-bottom:6px}
-.login-title{font-size:26px;font-weight:900;color:#fff;letter-spacing:1px;margin-bottom:32px;
-  text-shadow:0 2px 20px rgba(59,130,246,.5)}
+.login-kokuname{font-size:10px;color:var(--t2);letter-spacing:4px;text-transform:uppercase;margin-bottom:6px}
+.login-title{
+  font-size:24px;font-weight:900;color:#fff;
+  letter-spacing:1px;margin-bottom:30px;
+  text-shadow:0 2px 20px rgba(0,0,0,.7);
+}
 
 .login-card{
-  background:rgba(10,16,32,.88);
-  border:1px solid rgba(59,130,246,.22);
+  background:rgba(10,16,32,.9);
+  border:1px solid rgba(59,130,246,.18);
   border-radius:var(--rl);
-  padding:28px 24px 24px;
+  padding:28px 22px 24px;
   width:min(380px,100%);
-  box-shadow:0 0 80px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05);
-  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  box-shadow:0 0 80px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.04);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
 }
 
-.lbl{display:block;font-size:10px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin-bottom:7px}
-
-/* 国家セレクト */
-.lcnt-wrap{position:relative;margin-bottom:16px}
-.lcnt-sel{
-  width:100%;background:rgba(18,26,44,.9);
-  border:1px solid var(--bd);color:var(--t1);
-  padding:13px 40px 13px 14px;border-radius:var(--r);
-  font-family:inherit;font-size:14px;outline:none;
-  appearance:none;-webkit-appearance:none;cursor:pointer;
-  transition:border-color .2s;
-}
-.lcnt-sel:focus{border-color:var(--uc);box-shadow:0 0 0 3px rgba(59,130,246,.12)}
-.lcnt-arr{position:absolute;right:13px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--t3)}
-
-/* パスワード入力 */
-.lpw-wrap{
-  display:flex;align-items:center;
-  background:rgba(18,26,44,.9);border:1px solid var(--bd);
-  border-radius:var(--r);margin-bottom:8px;
-  overflow:hidden;transition:border-color .2s,box-shadow .2s;
-}
-.lpw-wrap:focus-within{border-color:var(--uc);box-shadow:0 0 0 3px rgba(59,130,246,.12)}
-.lpw-wrap.err{border-color:var(--ar);box-shadow:0 0 0 3px rgba(239,68,68,.12);animation:shake .35s ease}
-@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
-#LPW{
-  flex:1;background:none;border:none;color:var(--t1);
-  font-family:inherit;font-size:15px;letter-spacing:3px;
-  padding:13px 14px;outline:none;
-}
-#LPW::placeholder{font-size:13px;letter-spacing:.5px;color:var(--t3)}
-.leye{background:none;border:none;color:var(--t2);padding:0 14px;cursor:pointer;font-size:17px;flex-shrink:0}
-
-.lerr{color:var(--ar);font-size:11px;text-align:center;letter-spacing:.5px;margin-bottom:10px;min-height:16px}
-
-.lbtn{
-  width:100%;padding:15px;
-  background:linear-gradient(135deg,var(--uc),var(--uc2));
-  border:none;border-radius:var(--r);color:#fff;
-  font-family:inherit;font-size:14px;font-weight:700;
-  letter-spacing:2px;cursor:pointer;
-  box-shadow:0 6px 24px rgba(59,130,246,.38);
-  transition:all .2s;
-}
-.lbtn:active{transform:scale(.98);box-shadow:0 3px 12px rgba(59,130,246,.2)}
-.lbtn:disabled{opacity:.5;cursor:not-allowed;transform:none}
-.lhint{text-align:center;font-size:11px;color:var(--t3);margin-top:14px;letter-spacing:.5px}
-
-/* GAS URL バナー */
+/* GAS URL バナー（カード内） */
 #CONFIG_BANNER{
   display:none;
-  background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(239,68,68,.1));
-  border:1px solid rgba(245,158,11,.4);
-  border-radius:var(--r);padding:10px 14px;margin-bottom:16px;
-  align-items:center;gap:8px;font-size:11px;color:#f59e0b;
+  background:rgba(245,158,11,.1);
+  border:1px solid rgba(245,158,11,.35);
+  border-radius:var(--r);padding:10px 12px;
+  margin-bottom:16px;gap:8px;
+  align-items:center;font-size:11px;color:var(--ay);
 }
 #CONFIG_BANNER input{
-  flex:1;background:rgba(0,0,0,.4);border:1px solid rgba(245,158,11,.4);
+  flex:1;background:rgba(0,0,0,.4);border:1px solid rgba(245,158,11,.3);
   color:#fde68a;font-family:inherit;font-size:11px;
   padding:6px 10px;border-radius:6px;outline:none;min-width:0;
 }
 #CONFIG_BANNER button{
-  background:rgba(245,158,11,.25);border:1px solid rgba(245,158,11,.5);
-  color:#f59e0b;font-family:inherit;font-size:10px;
+  background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.4);
+  color:var(--ay);font-family:inherit;font-size:10px;
   padding:6px 10px;border-radius:6px;cursor:pointer;
   letter-spacing:.5px;white-space:nowrap;flex-shrink:0;
 }
 
-/* ════════════════════════════════════════════════════
-   ホーム本体（ログイン後）
-════════════════════════════════════════════════════ */
-#HOME{display:none;position:relative;z-index:1;min-height:100vh;padding-bottom:32px}
+.lbl{display:block;font-size:10px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin-bottom:7px}
 
-/* ─── ヘッダー ─── */
+/* セレクト */
+.lsel-wrap{position:relative;margin-bottom:16px}
+.lsel{
+  width:100%;background:rgba(18,26,44,.9);
+  border:1px solid var(--bd);color:var(--t1);
+  padding:12px 40px 12px 14px;border-radius:var(--r);
+  font-family:inherit;font-size:14px;outline:none;
+  appearance:none;-webkit-appearance:none;cursor:pointer;
+  transition:border-color .2s;
+}
+.lsel:focus{border-color:var(--uc);box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+.lsel-arr{position:absolute;right:14px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--t3);font-size:11px}
+
+/* パスワード */
+.lpw-wrap{
+  display:flex;align-items:center;
+  background:rgba(18,26,44,.9);border:1px solid var(--bd);
+  border-radius:var(--r);margin-bottom:8px;overflow:hidden;
+  transition:border-color .2s,box-shadow .2s;
+}
+.lpw-wrap:focus-within{border-color:var(--uc);box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+.lpw-wrap.err{border-color:var(--ar);box-shadow:0 0 0 3px rgba(239,68,68,.1);animation:shake .35s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+#LPW{
+  flex:1;background:none;border:none;color:var(--t1);
+  font-family:inherit;font-size:15px;letter-spacing:3px;
+  padding:12px 14px;outline:none;
+}
+#LPW::placeholder{font-size:13px;letter-spacing:.5px;color:var(--t3)}
+.leye{
+  background:none;border:none;color:var(--t2);
+  padding:0 14px;cursor:pointer;font-size:13px;
+  letter-spacing:0;flex-shrink:0;font-family:inherit;
+}
+
+.lerr{color:var(--ar);font-size:11px;text-align:center;letter-spacing:.5px;margin-bottom:10px;min-height:16px}
+
+.lbtn{
+  width:100%;padding:14px;
+  background:linear-gradient(135deg,var(--uc),var(--uc2));
+  border:none;border-radius:var(--r);color:#fff;
+  font-family:inherit;font-size:14px;font-weight:700;
+  letter-spacing:2px;cursor:pointer;
+  box-shadow:0 6px 24px rgba(59,130,246,.35);
+  transition:all .2s;
+}
+.lbtn:active{transform:scale(.98)}
+.lbtn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.lhint{text-align:center;font-size:11px;color:var(--t3);margin-top:14px;letter-spacing:.5px}
+
+/* ================================================
+   ホーム
+================================================ */
+#HOME{display:none;position:relative;z-index:1;min-height:100vh;padding-bottom:36px}
+
+/* ── ヘッダー ── */
 .hdr{
   position:sticky;top:0;z-index:300;
-  background:rgba(7,9,15,.82);
+  background:rgba(7,9,15,.84);
   border-bottom:1px solid rgba(255,255,255,.06);
   backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
   padding:0 14px;
   display:flex;align-items:center;justify-content:space-between;
-  height:56px;
-  box-shadow:0 2px 24px rgba(0,0,0,.4);
+  height:54px;
+  box-shadow:0 2px 24px rgba(0,0,0,.5);
 }
-.hdr-left{display:flex;align-items:center;gap:10px}
-.hdr-flag{
-  width:10px;height:36px;border-radius:3px;
-  background:var(--uc);
-  box-shadow:0 0 14px var(--uc);
-  flex-shrink:0;
-  transition:background .5s,box-shadow .5s;
-}
-.hdr-texts{}
+.hdr-l{display:flex;align-items:center;gap:10px}
+.hdr-flag{width:8px;height:34px;border-radius:3px;background:var(--uc);box-shadow:0 0 12px var(--uc);flex-shrink:0;transition:background .5s,box-shadow .5s}
 .hdr-label{font-size:9px;color:var(--t3);letter-spacing:2px;text-transform:uppercase}
 .hdr-nation{font-size:17px;font-weight:900;color:#fff;letter-spacing:.5px;line-height:1.2}
-
-.hdr-right{display:flex;align-items:center;gap:8px}
+.hdr-r{display:flex;align-items:center;gap:6px}
 .hdr-btn{
-  background:rgba(255,255,255,.06);
-  border:1px solid rgba(255,255,255,.1);
-  color:var(--t1);border-radius:8px;
-  padding:7px 14px;font-family:inherit;font-size:12px;
-  cursor:pointer;letter-spacing:.5px;transition:all .2s;
-  display:flex;align-items:center;gap:5px;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+  color:var(--t1);border-radius:8px;padding:7px 13px;
+  font-family:inherit;font-size:12px;cursor:pointer;
+  letter-spacing:.5px;transition:all .2s;
 }
-.hdr-btn:active{background:rgba(255,255,255,.1)}
+.hdr-btn:active{background:rgba(255,255,255,.12)}
 
-/* ─── ヒーローエリア ─── */
-.hero{
-  padding:28px 16px 18px;
-  text-align:center;
+/* ── 緊急連絡バー ── */
+#NOTICE_BAR{
+  display:none;
+  position:sticky;
+  top:54px;
+  z-index:280;
+  background:linear-gradient(135deg,rgba(185,28,28,.92),rgba(153,27,27,.92));
+  border-bottom:1px solid rgba(239,68,68,.4);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  box-shadow:0 3px 20px rgba(239,68,68,.25);
 }
-.hero-welcome{font-size:11px;color:var(--t2);letter-spacing:3px;text-transform:uppercase;margin-bottom:6px}
-.hero-name{
-  font-size:28px;font-weight:900;color:#fff;
-  text-shadow:0 2px 24px rgba(0,0,0,.7);
-  letter-spacing:.5px;margin-bottom:4px;
-}
-.hero-sub{font-size:12px;color:var(--t2);letter-spacing:.5px}
+#NOTICE_BAR.visible{display:block}
 
-/* ─── セクションタイトル ─── */
+.notice-inner{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:10px 14px;
+}
+.notice-tag{
+  font-size:9px;font-weight:700;letter-spacing:2px;
+  text-transform:uppercase;color:#fca5a5;
+  background:rgba(239,68,68,.25);
+  border:1px solid rgba(239,68,68,.4);
+  border-radius:4px;padding:2px 8px;
+  white-space:nowrap;flex-shrink:0;margin-top:1px;
+}
+.notice-text{
+  flex:1;font-size:13px;color:#fecaca;
+  line-height:1.55;word-break:break-all;
+}
+.notice-edit-btn{
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+  color:#fecaca;font-family:inherit;font-size:10px;
+  padding:4px 10px;border-radius:6px;cursor:pointer;
+  letter-spacing:.5px;flex-shrink:0;margin-top:1px;
+  transition:background .2s;white-space:nowrap;
+}
+.notice-edit-btn:active{background:rgba(255,255,255,.18)}
+
+/* ── ヒーロー ── */
+.hero{padding:26px 16px 16px;text-align:center}
+.hero-welcome{font-size:10px;color:var(--t2);letter-spacing:3px;text-transform:uppercase;margin-bottom:6px}
+.hero-name{font-size:26px;font-weight:900;color:#fff;text-shadow:0 2px 24px rgba(0,0,0,.7);letter-spacing:.5px;margin-bottom:4px}
+.hero-sub{font-size:12px;color:var(--t2);letter-spacing:.4px}
+
+/* ── セクション見出し ── */
 .sec-title{
   display:flex;align-items:center;gap:10px;
   padding:0 16px;margin-bottom:12px;
-  font-size:10px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;
+  font-size:9px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;
 }
-.sec-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(30,45,69,.8),transparent)}
+.sec-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--bd),transparent)}
 
-/* ─── ナビグリッド ─── */
+/* ── ナビグリッド ── */
 .nav-grid{
   display:grid;
   grid-template-columns:repeat(2,1fr);
-  gap:10px;
-  padding:0 14px;
-  margin-bottom:28px;
+  gap:9px;padding:0 14px;margin-bottom:28px;
 }
 
 .nav-btn{
-  background:rgba(13,18,32,.8);
+  background:rgba(13,18,32,.82);
   border:1px solid rgba(30,45,69,.9);
-  border-radius:var(--r);
-  padding:18px 14px 16px;
-  cursor:pointer;
-  transition:all .22s;
-  display:flex;flex-direction:column;align-items:flex-start;gap:8px;
+  border-radius:var(--r);padding:16px 14px 14px;
+  cursor:pointer;transition:all .2s;
+  display:flex;flex-direction:column;align-items:flex-start;gap:7px;
   position:relative;overflow:hidden;
   text-decoration:none;color:inherit;
   backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
@@ -248,132 +286,150 @@ body{
 }
 .nav-btn::before{
   content:'';position:absolute;inset:0;
-  background:linear-gradient(135deg,rgba(255,255,255,.03),transparent 60%);
+  background:linear-gradient(135deg,rgba(255,255,255,.025),transparent 60%);
   pointer-events:none;
 }
 .nav-btn::after{
-  content:'';position:absolute;
-  top:0;left:0;right:0;height:2px;
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
   background:linear-gradient(90deg,var(--uc),transparent);
   opacity:0;transition:opacity .2s;
 }
 .nav-btn:hover::after,.nav-btn:active::after{opacity:1}
 .nav-btn:hover,.nav-btn:active{
-  border-color:rgba(var(--uc-rgb,59,130,246),.4);
-  background:rgba(13,18,32,.92);
+  border-color:rgba(59,130,246,.35);
+  background:rgba(18,26,44,.9);
   transform:translateY(-2px);
-  box-shadow:0 8px 28px rgba(0,0,0,.45);
+  box-shadow:0 8px 28px rgba(0,0,0,.5);
 }
 
-.nav-icon{font-size:26px;line-height:1}
-.nav-label{font-size:13px;font-weight:700;color:var(--t1);letter-spacing:.3px;line-height:1.3}
-.nav-sub{font-size:10px;color:var(--t3);letter-spacing:.3px}
-.nav-arr{position:absolute;bottom:12px;right:14px;color:var(--t3);font-size:12px}
+.nav-ico{
+  width:28px;height:28px;border-radius:6px;
+  background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.2);
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+/* アイコン代替：CSS図形 */
+.ico-scroll{position:relative;width:12px;height:15px;background:rgba(198,220,240,.7);border-radius:2px}
+.ico-scroll::before{content:'';position:absolute;top:3px;left:2px;right:2px;height:1.5px;background:rgba(7,9,15,.5);box-shadow:0 3px 0 rgba(7,9,15,.5),0 6px 0 rgba(7,9,15,.5)}
+.ico-map{width:14px;height:14px;border:1.5px solid rgba(198,220,240,.7);border-radius:1px;position:relative}
+.ico-map::after{content:'';position:absolute;left:50%;top:0;bottom:0;width:1.5px;background:rgba(198,220,240,.4)}
+.ico-mail{width:14px;height:10px;border:1.5px solid rgba(198,220,240,.7);border-radius:2px;position:relative;margin-top:2px}
+.ico-mail::before{content:'';position:absolute;top:0;left:0;right:0;height:5px;border-bottom:1.5px solid rgba(198,220,240,.4);clip-path:polygon(0 0,50% 60%,100% 0)}
+.ico-trade{width:14px;height:14px;position:relative}
+.ico-trade::before{content:'';position:absolute;top:4px;left:0;right:0;height:1.5px;background:rgba(198,220,240,.7)}
+.ico-trade::after{content:'';position:absolute;bottom:2px;left:2px;right:2px;height:1.5px;background:rgba(198,220,240,.7)}
+.ico-info{width:12px;height:15px;border:1.5px solid rgba(198,220,240,.7);border-radius:2px;position:relative}
+.ico-info::before{content:'i';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10px;color:rgba(198,220,240,.8);font-style:italic;font-family:serif}
+.ico-war{width:14px;height:14px;position:relative}
+.ico-war::before,.ico-war::after{content:'';position:absolute;background:rgba(198,220,240,.7);border-radius:1px}
+.ico-war::before{width:2px;height:14px;left:6px}
+.ico-war::after{width:14px;height:2px;top:6px}
+.ico-diplo{width:14px;height:14px;border-radius:50%;border:1.5px solid rgba(198,220,240,.7);position:relative}
+.ico-diplo::before{content:'';position:absolute;inset:2px;border-radius:50%;border:1px solid rgba(198,220,240,.3)}
+.ico-system{width:14px;height:14px;border-radius:2px;border:1.5px solid rgba(198,220,240,.7);position:relative}
+.ico-system::before{content:'';position:absolute;top:3px;left:2px;right:2px;height:1.5px;background:rgba(198,220,240,.5);box-shadow:0 3px 0 rgba(198,220,240,.5),0 6px 0 rgba(198,220,240,.5)}
+.ico-vote{width:14px;height:14px;border:1.5px solid rgba(198,220,240,.35);border-radius:2px;position:relative}
 
-/* 無効ボタン（選挙） */
+.nav-label{font-size:13px;font-weight:700;color:var(--t1);letter-spacing:.3px;line-height:1.3}
+.nav-sub{font-size:10px;color:var(--t3);letter-spacing:.2px}
+.nav-arr{position:absolute;bottom:11px;right:13px;color:var(--t3);font-size:11px}
+
+/* 無効ボタン */
 .nav-btn.disabled{
-  opacity:.38;cursor:not-allowed;
+  opacity:.3;cursor:not-allowed;
   background:rgba(10,14,24,.7)!important;
-  border-color:rgba(30,45,69,.5)!important;
+  border-color:rgba(30,45,69,.4)!important;
   transform:none!important;box-shadow:none!important;
 }
 .nav-btn.disabled::after{display:none}
-.nav-btn.disabled .nav-label{text-decoration:line-through;color:var(--t3)}
+.nav-btn.disabled .nav-label{text-decoration:line-through;color:var(--t3)!important}
+.nav-btn.disabled .nav-ico{opacity:.4}
 
-/* ─── 掲示板 ─── */
+/* ── 掲示板 ── */
 .bbs-wrap{padding:0 14px;margin-bottom:24px}
-
 .bbs-card{
-  background:rgba(10,16,32,.82);
-  border:1px solid rgba(30,45,69,.8);
-  border-radius:var(--rl);
-  overflow:hidden;
+  background:rgba(10,16,32,.84);border:1px solid rgba(30,45,69,.8);
+  border-radius:var(--rl);overflow:hidden;
   backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
 }
-
 .bbs-head{
   display:flex;align-items:center;justify-content:space-between;
-  padding:14px 16px;border-bottom:1px solid rgba(30,45,69,.6);
+  padding:13px 16px;border-bottom:1px solid rgba(30,45,69,.6);
 }
 .bbs-head-l{display:flex;align-items:center;gap:8px}
-.bbs-icon{font-size:18px}
 .bbs-htitle{font-size:13px;font-weight:700;color:var(--t1);letter-spacing:.5px}
 .bbs-count{font-size:10px;color:var(--t3);background:rgba(30,45,69,.8);padding:2px 8px;border-radius:10px;border:1px solid var(--bd2)}
-.bbs-refresh{background:none;border:none;color:var(--t2);font-size:18px;cursor:pointer;padding:4px;transition:transform .4s}
+.bbs-refresh{
+  background:none;border:none;color:var(--t2);
+  font-size:16px;cursor:pointer;padding:4px 8px;
+  transition:transform .4s;font-family:inherit;
+  letter-spacing:-1px;
+}
 .bbs-refresh:active{transform:rotate(180deg)}
 
 /* 投稿フォーム */
 .bbs-form{padding:12px 14px;border-bottom:1px solid rgba(30,45,69,.5)}
-.bbs-input-wrap{
-  display:flex;align-items:flex-end;gap:8px;
-}
+.bbs-input-wrap{display:flex;align-items:flex-end;gap:8px}
 .bbs-textarea{
   flex:1;background:rgba(18,26,44,.8);border:1px solid var(--bd);
   color:var(--t1);font-family:inherit;font-size:13px;
-  padding:10px 12px;border-radius:10px;outline:none;resize:none;
-  min-height:44px;max-height:120px;
+  padding:10px 12px;border-radius:var(--r);outline:none;
+  resize:none;min-height:44px;max-height:120px;
   transition:border-color .2s;line-height:1.5;
 }
-.bbs-textarea:focus{border-color:var(--uc);box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+.bbs-textarea:focus{border-color:var(--uc);box-shadow:0 0 0 3px rgba(59,130,246,.08)}
 .bbs-textarea::placeholder{color:var(--t3)}
 .bbs-post-btn{
   background:linear-gradient(135deg,var(--uc),var(--uc2));
-  border:none;border-radius:10px;color:#fff;
+  border:none;border-radius:var(--r);color:#fff;
   padding:10px 16px;font-family:inherit;font-size:12px;font-weight:700;
   cursor:pointer;letter-spacing:.5px;flex-shrink:0;
-  box-shadow:0 4px 14px rgba(59,130,246,.3);transition:all .2s;
+  box-shadow:0 4px 14px rgba(59,130,246,.28);transition:all .2s;
   white-space:nowrap;
 }
 .bbs-post-btn:active{transform:scale(.97)}
-.bbs-post-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.bbs-post-btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
 .bbs-char{font-size:10px;color:var(--t3);text-align:right;padding:4px 2px 0}
 
-/* メッセージリスト */
-.bbs-msgs{max-height:420px;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--bd) transparent}
+/* メッセージ一覧 */
+.bbs-msgs{max-height:400px;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--bd) transparent}
 .bbs-msgs::-webkit-scrollbar{width:3px}
 .bbs-msgs::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px}
-
 .bbs-empty{text-align:center;padding:36px 20px;color:var(--t3);font-size:12px;letter-spacing:1px}
 
-.msg-item{
-  padding:12px 14px;
-  border-bottom:1px solid rgba(20,32,52,.7);
-  transition:background .15s;
-  position:relative;
-}
+.msg-item{padding:12px 14px;border-bottom:1px solid rgba(20,32,52,.7);position:relative;transition:background .15s}
 .msg-item:last-child{border-bottom:none}
-.msg-item:hover{background:rgba(30,45,69,.15)}
-
-.msg-header{display:flex;align-items:center;gap:6px;margin-bottom:6px}
-.msg-flag{width:8px;height:16px;border-radius:2px;flex-shrink:0;transition:background .3s}
+.msg-item:hover{background:rgba(30,45,69,.12)}
+.msg-header{display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap}
+.msg-flag{width:7px;height:16px;border-radius:2px;flex-shrink:0}
 .msg-author{font-size:11px;font-weight:700;color:var(--t1);letter-spacing:.3px}
-.msg-admin-badge{
-  font-size:9px;background:linear-gradient(135deg,#7c3aed,#a855f7);
-  color:#fff;padding:1px 7px;border-radius:10px;letter-spacing:.5px;
+.msg-admin-tag{
+  font-size:9px;font-weight:700;letter-spacing:1.5px;
+  background:rgba(220,38,38,.2);border:1px solid rgba(220,38,38,.4);
+  color:#fca5a5;padding:1px 7px;border-radius:4px;text-transform:uppercase;
 }
 .msg-time{font-size:10px;color:var(--t3);margin-left:auto;flex-shrink:0}
 .msg-text{font-size:13px;color:var(--t1);line-height:1.65;white-space:pre-wrap;word-break:break-all}
 .msg-del{
   position:absolute;top:10px;right:10px;
-  background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);
-  color:rgba(239,68,68,.6);border-radius:6px;
-  font-size:10px;padding:2px 7px;cursor:pointer;
-  font-family:inherit;display:none;transition:all .2s;
+  background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);
+  color:rgba(239,68,68,.5);border-radius:6px;
+  font-size:10px;padding:2px 8px;cursor:pointer;
+  font-family:inherit;transition:all .2s;letter-spacing:.5px;
 }
-.msg-del:hover{background:rgba(239,68,68,.22);color:var(--ar)}
+.msg-del:hover{background:rgba(239,68,68,.2);color:var(--ar)}
 
-/* ════════════════════════════════════════════════════
-   設定モーダル
-════════════════════════════════════════════════════ */
+/* ================================================
+   モーダル共通
+================================================ */
 .mover{
-  display:none;position:fixed;inset:0;
-  background:rgba(3,6,12,.88);z-index:800;
-  align-items:flex-end;justify-content:center;
+  display:none;position:fixed;inset:0;background:rgba(3,6,12,.88);
+  z-index:800;align-items:flex-end;justify-content:center;
   backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
 }
 .mover.on{display:flex}
 .modal{
-  background:var(--s1s);border:1px solid var(--bd);
+  background:var(--s1);border:1px solid var(--bd);
   border-radius:var(--rl) var(--rl) 0 0;
   width:100%;max-width:520px;max-height:88vh;
   overflow:hidden;display:flex;flex-direction:column;
@@ -381,100 +437,108 @@ body{
   animation:sup .28s cubic-bezier(.22,1,.36,1);
 }
 @keyframes sup{from{transform:translateY(100%)}to{transform:translateY(0)}}
-.modal-handle{display:flex;justify-content:center;padding:10px 0 4px}
-.modal-handle-bar{width:36px;height:4px;background:var(--bd);border-radius:2px}
-.modal-hdr{
-  padding:8px 18px 14px;border-bottom:1px solid var(--bd);
-  display:flex;align-items:center;justify-content:space-between;
-}
-.modal-title{font-size:15px;font-weight:700;color:var(--t1);letter-spacing:.5px}
-.modal-close{
-  background:var(--s2s);border:1px solid var(--bd);
+.mhandle{display:flex;justify-content:center;padding:10px 0 4px}
+.mhandle-bar{width:36px;height:4px;background:var(--bd);border-radius:2px}
+.mhdr{padding:8px 18px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+.m-title{font-size:15px;font-weight:700;color:var(--t1);letter-spacing:.5px}
+.m-close{
+  background:var(--s2);border:1px solid var(--bd);
   color:var(--t2);width:30px;height:30px;border-radius:50%;
   cursor:pointer;font-size:14px;font-family:inherit;
   display:flex;align-items:center;justify-content:center;
 }
-.modal-body{flex:1;overflow-y:auto;padding:18px}
+.mbody{flex:1;overflow-y:auto;padding:18px;-webkit-overflow-scrolling:touch}
 
-/* 設定セクション */
-.setting-sec{
-  background:var(--s2s);border:1px solid var(--bd2);
-  border-radius:var(--r);padding:16px;margin-bottom:14px;
-}
-.setting-sec-title{
-  font-size:10px;color:var(--uc);letter-spacing:2px;
-  text-transform:uppercase;margin-bottom:14px;
-  display:flex;align-items:center;gap:8px;
-}
-.setting-sec-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(59,130,246,.3),transparent)}
-
+/* ── 設定セクション ── */
+.set-sec{background:var(--s2);border:1px solid var(--bd2);border-radius:var(--r);padding:16px;margin-bottom:14px}
+.set-sec-title{font-size:10px;color:var(--uc);letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.set-sec-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(59,130,246,.25),transparent)}
 .finput{
   width:100%;background:var(--s3);border:1px solid var(--bd);
   color:var(--t1);padding:11px 14px;border-radius:var(--r);
   font-family:inherit;font-size:14px;outline:none;
   transition:border-color .2s;margin-bottom:10px;
 }
-.finput:focus{border-color:var(--uc);box-shadow:0 0 0 3px rgba(59,130,246,.1)}
-.finput::placeholder{color:var(--t3)}
 .finput:last-of-type{margin-bottom:0}
+.finput:focus{border-color:var(--uc);box-shadow:0 0 0 3px rgba(59,130,246,.08)}
+.finput::placeholder{color:var(--t3)}
 
-.color-preview-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-.color-swatch-big{
-  width:44px;height:44px;border-radius:8px;
-  border:1px solid rgba(255,255,255,.15);flex-shrink:0;
-  transition:background .3s;
-}
-.color-input-text{flex:1}
+/* カラープレビュー行 */
+.color-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.color-swatch{width:44px;height:44px;border-radius:8px;border:1px solid rgba(255,255,255,.12);flex-shrink:0;transition:background .3s}
+.finput-color{flex:1;margin-bottom:0}
 
 .sbtn{
   width:100%;padding:13px;border:none;border-radius:var(--r);
   font-family:inherit;font-size:13px;font-weight:700;
-  letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;
-  transition:all .2s;margin-top:10px;
+  letter-spacing:1.5px;text-transform:uppercase;
+  cursor:pointer;transition:all .2s;margin-top:10px;
 }
-.sbtn-ac{background:linear-gradient(135deg,var(--uc),var(--uc2));color:#fff;box-shadow:0 4px 16px rgba(59,130,246,.3)}
+.sbtn-ac{background:linear-gradient(135deg,var(--uc),var(--uc2));color:#fff;box-shadow:0 4px 16px rgba(59,130,246,.28)}
 .sbtn-ac:active{transform:scale(.98)}
 .sbtn-ac:disabled{opacity:.45;cursor:not-allowed;transform:none}
-.sbtn-logout{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--ar)}
-.sbtn-logout:active{background:rgba(239,68,68,.18)}
+.sbtn-sub{background:rgba(255,255,255,.05);border:1px solid var(--bd);color:var(--t2);box-shadow:none}
+.sbtn-sub:active{background:rgba(255,255,255,.08)}
+.sbtn-logout{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);color:var(--ar)}
+.sbtn-logout:active{background:rgba(239,68,68,.14)}
 
-.modal-footer{padding:14px 18px;border-top:1px solid var(--bd);padding-bottom:max(14px,env(safe-area-inset-bottom,14px))}
+.mfoot{padding:14px 18px;border-top:1px solid var(--bd);padding-bottom:max(14px,env(safe-area-inset-bottom,14px))}
+
+/* ── 緊急連絡編集モーダル ── */
+.notice-preview{
+  background:rgba(185,28,28,.15);border:1px solid rgba(239,68,68,.25);
+  border-radius:var(--r);padding:12px 14px;
+  margin-bottom:14px;font-size:13px;color:#fca5a5;
+  line-height:1.55;min-height:52px;word-break:break-all;
+  white-space:pre-wrap;
+}
+.notice-toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0 2px}
+.notice-toggle-lbl{font-size:12px;color:var(--t2);letter-spacing:.4px}
+.toggle-wrap{display:flex;align-items:center;gap:8px}
+.toggle-track{
+  width:44px;height:24px;border-radius:12px;
+  background:var(--s3);border:1px solid var(--bd);
+  position:relative;cursor:pointer;transition:background .3s;
+}
+.toggle-track.on{background:var(--ar);border-color:var(--ar)}
+.toggle-thumb{
+  position:absolute;top:3px;left:3px;
+  width:16px;height:16px;border-radius:50%;
+  background:#fff;transition:left .25s;
+  box-shadow:0 1px 4px rgba(0,0,0,.3);
+}
+.toggle-track.on .toggle-thumb{left:23px}
+.toggle-status{font-size:11px;color:var(--t3);letter-spacing:.5px;min-width:28px}
+.toggle-track.on + .toggle-status{color:var(--ar)}
 </style>
 </head>
 <body>
 
-<!-- 背景 -->
 <div id="BG"></div>
-
-<!-- ローディング -->
 <div class="lov on" id="LOV"><div class="spin"></div><div class="ltxt" id="LOV_TXT">LOADING...</div></div>
-
-<!-- トースト -->
 <div class="toast" id="TOAST"></div>
 
-<!-- ═══════════════════════════════════════════
+<!-- ================================================
      ログイン画面
-═══════════════════════════════════════════ -->
+================================================ -->
 <div id="LOGIN_SCREEN">
-
-  <!-- GAS URLバナー -->
-  <div id="CONFIG_BANNER">
-    <span>⚠</span>
-    <input type="text" id="URL_INPUT" placeholder="GAS URLを貼り付け">
-    <button onclick="saveUrl()">保存</button>
-  </div>
-
-  <div class="login-logo">🌐</div>
-  <div class="login-nation">National Operation System</div>
+  <div class="login-mark"></div>
+  <div class="login-kokuname">National Operation System</div>
   <div class="login-title">国家運営ポータル</div>
 
   <div class="login-card">
+    <div id="CONFIG_BANNER">
+      <span style="flex-shrink:0;font-size:11px">GAS URL</span>
+      <input type="text" id="URL_INPUT" placeholder="https://script.google.com/macros/s/.../exec">
+      <button onclick="saveUrl()">保存</button>
+    </div>
+
     <label class="lbl">国家を選択</label>
-    <div class="lcnt-wrap">
-      <select class="lcnt-sel" id="L_CSEL">
-        <option value="">─ 読込中... ─</option>
+    <div class="lsel-wrap">
+      <select class="lsel" id="L_CSEL">
+        <option value="">-- 読込中 --</option>
       </select>
-      <span class="lcnt-arr">▼</span>
+      <span class="lsel-arr">▼</span>
     </div>
 
     <label class="lbl">パスワード</label>
@@ -482,39 +546,48 @@ body{
       <input type="password" id="LPW" placeholder="パスワードを入力"
         maxlength="32" autocomplete="current-password"
         onkeydown="if(event.key==='Enter')doLogin()">
-      <button class="leye" onclick="toggleEye()">👁</button>
+      <button class="leye" id="L_EYE" onclick="toggleEye()">表示</button>
     </div>
     <div class="lerr" id="L_ERR"></div>
 
-    <button class="lbtn" id="L_BTN" onclick="doLogin()">▶ ログイン</button>
-    <div class="lhint">国家運営メンバー専用サービスです</div>
+    <button class="lbtn" id="L_BTN" onclick="doLogin()">ログイン</button>
+    <div class="lhint">国家運営メンバー専用</div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════
+<!-- ================================================
      ホーム（ログイン後）
-═══════════════════════════════════════════ -->
+================================================ -->
 <div id="HOME">
 
   <!-- ヘッダー -->
   <div class="hdr">
-    <div class="hdr-left">
+    <div class="hdr-l">
       <div class="hdr-flag" id="H_FLAG"></div>
-      <div class="hdr-texts">
+      <div>
         <div class="hdr-label">現在の国家</div>
-        <div class="hdr-nation" id="H_NATION">─</div>
+        <div class="hdr-nation" id="H_NATION">--</div>
       </div>
     </div>
-    <div class="hdr-right">
-      <button class="hdr-btn" onclick="openSettings()">⚙ 設定</button>
+    <div class="hdr-r">
+      <button class="hdr-btn" onclick="openSettings()">設定</button>
+    </div>
+  </div>
+
+  <!-- 緊急連絡バー -->
+  <div id="NOTICE_BAR">
+    <div class="notice-inner">
+      <span class="notice-tag">緊急連絡</span>
+      <span class="notice-text" id="NOTICE_TEXT">--</span>
+      <button class="notice-edit-btn" id="NOTICE_EDIT_BTN" onclick="openNoticeModal()" style="display:none">編集</button>
     </div>
   </div>
 
   <!-- ヒーロー -->
   <div class="hero">
-    <div class="hero-welcome">Welcome Back</div>
-    <div class="hero-name" id="H_HERO_NAME">─</div>
-    <div class="hero-sub" id="H_HERO_SUB">国家運営システムへようこそ</div>
+    <div class="hero-welcome">WELCOME BACK</div>
+    <div class="hero-name" id="H_HERO"></div>
+    <div class="hero-sub">国家運営システムへようこそ</div>
   </div>
 
   <!-- ナビゲーション -->
@@ -522,16 +595,16 @@ body{
   <div class="nav-grid">
 
     <a class="nav-btn" href="Action.html">
-      <div class="nav-icon">📜</div>
+      <div class="nav-ico"><div class="ico-scroll"></div></div>
       <div>
         <div class="nav-label">政策</div>
-        <div class="nav-sub">国家の政策を管理</div>
+        <div class="nav-sub">国家政策の管理</div>
       </div>
       <div class="nav-arr">›</div>
     </a>
 
     <a class="nav-btn" href="State.html">
-      <div class="nav-icon">🗺️</div>
+      <div class="nav-ico"><div class="ico-map"></div></div>
       <div>
         <div class="nav-label">ステート政策</div>
         <div class="nav-sub">地域ごとの政策</div>
@@ -540,16 +613,16 @@ body{
     </a>
 
     <a class="nav-btn" href="mailbox.html">
-      <div class="nav-icon">📬</div>
+      <div class="nav-ico"><div class="ico-mail"></div></div>
       <div>
         <div class="nav-label">メールボックス</div>
-        <div class="nav-sub">国家間の通信</div>
+        <div class="nav-sub">国家間通信</div>
       </div>
       <div class="nav-arr">›</div>
     </a>
 
     <a class="nav-btn" href="trade.html">
-      <div class="nav-icon">🚢</div>
+      <div class="nav-ico"><div class="ico-trade"></div></div>
       <div>
         <div class="nav-label">貿易管理</div>
         <div class="nav-sub">個人間貿易・貿易路</div>
@@ -558,25 +631,25 @@ body{
     </a>
 
     <a class="nav-btn" href="information.html">
-      <div class="nav-icon">📊</div>
+      <div class="nav-ico"><div class="ico-info"></div></div>
       <div>
         <div class="nav-label">情報</div>
-        <div class="nav-sub">各種情報を閲覧</div>
+        <div class="nav-sub">各種情報の閲覧</div>
       </div>
       <div class="nav-arr">›</div>
     </a>
 
     <a class="nav-btn" href="War.html">
-      <div class="nav-icon">⚔️</div>
+      <div class="nav-ico"><div class="ico-war"></div></div>
       <div>
         <div class="nav-label">戦争システム</div>
-        <div class="nav-sub">戦争・軍事操作</div>
+        <div class="nav-sub">軍事・戦争操作</div>
       </div>
       <div class="nav-arr">›</div>
     </a>
 
     <a class="nav-btn" href="Diplomacy.html">
-      <div class="nav-icon">🤝</div>
+      <div class="nav-ico"><div class="ico-diplo"></div></div>
       <div>
         <div class="nav-label">外交</div>
         <div class="nav-sub">外交・条約管理</div>
@@ -585,7 +658,7 @@ body{
     </a>
 
     <a class="nav-btn" href="System.html">
-      <div class="nav-icon">🏛️</div>
+      <div class="nav-ico"><div class="ico-system"></div></div>
       <div>
         <div class="nav-label">民間システム</div>
         <div class="nav-sub">民間・社会システム</div>
@@ -594,11 +667,11 @@ body{
     </a>
 
     <!-- 選挙（無効・取り消し線） -->
-    <div class="nav-btn disabled" style="grid-column:span 2" onclick="return false">
-      <div class="nav-icon">🗳️</div>
+    <div class="nav-btn disabled" style="grid-column:span 2">
+      <div class="nav-ico"><div class="ico-vote"></div></div>
       <div>
         <div class="nav-label">選挙の投票</div>
-        <div class="nav-sub">現在利用不可</div>
+        <div class="nav-sub">現在利用停止中</div>
       </div>
     </div>
 
@@ -610,116 +683,146 @@ body{
     <div class="bbs-card">
       <div class="bbs-head">
         <div class="bbs-head-l">
-          <span class="bbs-icon">📋</span>
           <span class="bbs-htitle">掲示板</span>
-          <span class="bbs-count" id="BBS_COUNT">─</span>
+          <span class="bbs-count" id="BBS_COUNT">--</span>
         </div>
-        <button class="bbs-refresh" onclick="loadMessages()" title="更新">↻</button>
+        <button class="bbs-refresh" onclick="loadMessages()" title="更新">&#8635;</button>
       </div>
-
-      <!-- 投稿フォーム -->
       <div class="bbs-form">
         <div class="bbs-input-wrap">
           <textarea class="bbs-textarea" id="BBS_TEXT"
-            placeholder="メッセージを入力…"
-            oninput="updCharCount()"
-            onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey))postMsg()"
+            placeholder="メッセージを入力... (Ctrl+Enter で投稿)"
+            oninput="updChar()"
+            onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter')postMsg()"
             rows="1" maxlength="500"></textarea>
           <button class="bbs-post-btn" id="BBS_POST" onclick="postMsg()">投稿</button>
         </div>
         <div class="bbs-char" id="BBS_CHAR">0 / 500</div>
       </div>
-
-      <!-- メッセージ一覧 -->
       <div class="bbs-msgs" id="BBS_MSGS">
         <div class="bbs-empty">読込中...</div>
       </div>
     </div>
   </div>
+
 </div>
 
-<!-- ═══════════════════════════════════════════
+<!-- ================================================
      設定モーダル
-═══════════════════════════════════════════ -->
-<div class="mover" id="SETTINGS_MODAL" onclick="handleOvClick(event)">
+================================================ -->
+<div class="mover" id="M_SETTINGS" onclick="if(event.target===this)closeSettings()">
   <div class="modal">
-    <div class="modal-handle"><div class="modal-handle-bar"></div></div>
-    <div class="modal-hdr">
-      <div class="modal-title">⚙ 設定</div>
-      <button class="modal-close" onclick="closeSettings()">✕</button>
+    <div class="mhandle"><div class="mhandle-bar"></div></div>
+    <div class="mhdr">
+      <div class="m-title">設定</div>
+      <button class="m-close" onclick="closeSettings()">X</button>
     </div>
-    <div class="modal-body">
-
-      <!-- パスワード変更 -->
-      <div class="setting-sec">
-        <div class="setting-sec-title">🔐 パスワード変更</div>
-        <input type="password" class="finput" id="S_OLD_PW" placeholder="現在のパスワード" autocomplete="current-password">
-        <input type="password" class="finput" id="S_NEW_PW" placeholder="新しいパスワード（4文字以上）" autocomplete="new-password">
-        <input type="password" class="finput" id="S_NEW_PW2" placeholder="新しいパスワード（確認）" autocomplete="new-password">
-        <button class="sbtn sbtn-ac" id="S_PW_BTN" onclick="changePW()">パスワードを変更</button>
+    <div class="mbody">
+      <div class="set-sec">
+        <div class="set-sec-title">パスワード変更</div>
+        <input type="password" class="finput" id="S_OLD" placeholder="現在のパスワード" autocomplete="current-password">
+        <input type="password" class="finput" id="S_NEW" placeholder="新しいパスワード（4文字以上）" autocomplete="new-password">
+        <input type="password" class="finput" id="S_NEW2" placeholder="新しいパスワード（確認）" autocomplete="new-password">
+        <button class="sbtn sbtn-ac" id="S_PW_BTN" onclick="changePW()">パスワードを変更する</button>
       </div>
-
-      <!-- カラー変更 -->
-      <div class="setting-sec">
-        <div class="setting-sec-title">🎨 国家カラー変更</div>
-        <div class="color-preview-row">
-          <div class="color-swatch-big" id="S_COLOR_SWATCH"></div>
-          <input type="text" class="finput color-input-text" id="S_COLOR_TEXT"
-            placeholder="#3b82f6" maxlength="9"
-            oninput="updColorPreview()" style="margin-bottom:0">
+      <div class="set-sec" id="S_COLOR_SEC">
+        <div class="set-sec-title">国家カラー変更</div>
+        <div class="color-row">
+          <div class="color-swatch" id="S_SWATCH"></div>
+          <input type="text" class="finput finput-color" id="S_COLOR"
+            placeholder="#3b82f6" maxlength="9" oninput="updSwatchPreview()">
         </div>
-        <input type="color" id="S_COLOR_PICKER" style="position:absolute;opacity:0;width:0;height:0" onchange="onColorPick()">
-        <button class="sbtn sbtn-ac" onclick="document.getElementById('S_COLOR_PICKER').click()"
-          style="background:rgba(255,255,255,.06);border:1px solid var(--bd);color:var(--t2);box-shadow:none;margin-top:0;margin-bottom:10px">
-          🎨 カラーピッカーを使う
-        </button>
-        <button class="sbtn sbtn-ac" id="S_COLOR_BTN" onclick="changeColor()">カラーを変更</button>
+        <input type="color" id="S_PICKER" style="position:absolute;opacity:0;width:0;height:0" onchange="onPickerChange()">
+        <button class="sbtn sbtn-sub" style="margin-top:0;margin-bottom:8px" onclick="document.getElementById('S_PICKER').click()">カラーピッカーを開く</button>
+        <button class="sbtn sbtn-ac" id="S_COLOR_BTN" onclick="changeColor()">カラーを変更する</button>
       </div>
-
     </div>
-    <div class="modal-footer">
-      <button class="sbtn sbtn-logout" onclick="doLogout()">🚪 ログアウト</button>
+    <div class="mfoot">
+      <button class="sbtn sbtn-logout" onclick="doLogout()">ログアウト</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================
+     緊急連絡 編集モーダル（運営のみ）
+================================================ -->
+<div class="mover" id="M_NOTICE" onclick="if(event.target===this)closeNoticeModal()">
+  <div class="modal">
+    <div class="mhandle"><div class="mhandle-bar"></div></div>
+    <div class="mhdr">
+      <div class="m-title">緊急連絡の編集</div>
+      <button class="m-close" onclick="closeNoticeModal()">X</button>
+    </div>
+    <div class="mbody">
+      <div class="set-sec">
+        <div class="set-sec-title">連絡内容</div>
+        <textarea class="finput" id="N_TEXT" rows="4"
+          placeholder="緊急連絡の内容を入力（全プレイヤーに表示されます）"
+          oninput="updNoticePreview()" style="resize:vertical;line-height:1.6;min-height:100px"></textarea>
+        <div style="font-size:10px;color:var(--t3);margin-bottom:4px">プレビュー</div>
+        <div class="notice-preview" id="N_PREVIEW"></div>
+        <div class="notice-toggle-row">
+          <span class="notice-toggle-lbl">緊急連絡を表示する</span>
+          <div class="toggle-wrap">
+            <div class="toggle-track" id="N_TOGGLE" onclick="toggleNotice()">
+              <div class="toggle-thumb"></div>
+            </div>
+            <span class="toggle-status" id="N_STATUS">OFF</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mfoot">
+      <button class="sbtn sbtn-ac" id="N_SAVE_BTN" onclick="saveNotice()">この内容で保存する</button>
     </div>
   </div>
 </div>
 
 <script>
 
-var GAS_URL = 'https://script.google.com/macros/s/AKfycbwUsUaV5xnoJz4AcOLrb4PQbE3QpQF81dl5iy8URdbHhu_jHuVumZkyqoTvEJCxlI9qLQ/exec';
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbxe_Sr_grq69-gUMzTtYZY2NJMeOJqXzt47gJqO65Hq-4YDplnDH0NXY-tj0RU9Sgjj/exec'; 
 
-var ADMIN_PW = '03280317';
+var ADMIN_NAME = '運営';
+var ADMIN_PW   = '03280317';
+var LS_URL     = 'home_gas_url';
+var LS_SES     = 'home_session';
 
-var LS_URL   = 'home_gas_url';
-var LS_SES   = 'home_session';
+var SESSION    = null; // { country, color, isAdmin }
+var NOTICE_ON  = false; // 現在の緊急連絡表示フラグ
 
-// セッションデータ
-var SESSION  = null; // { country, color }
-
-// ═══════════════════════════════════════════════════
+// ================================================
 //  起動
-// ═══════════════════════════════════════════════════
+// ================================================
 window.addEventListener('DOMContentLoaded', function(){
-  var stored = localStorage.getItem(LS_URL);
-  if(stored) GAS_URL = stored;
-  if(!GAS_URL.trim()){ showBanner(); hideLoading(); }
+  var sv = localStorage.getItem(LS_URL);
+  if(sv) GAS_URL = sv;
+  if(!GAS_URL.trim()){ showBanner(); }
 
-  // セッション復元
   try{
     var s = sessionStorage.getItem(LS_SES);
-    if(s){ SESSION = JSON.parse(s); }
+    if(s) SESSION = JSON.parse(s);
   }catch(e){}
 
   if(SESSION){
+    hideLoading();
     applySession();
     loadMessages();
+    loadNotice();
   } else {
     hideLoading();
-    document.getElementById('LOGIN_SCREEN').style.display='flex';
-    if(GAS_URL) loadCountryList();
+    showLogin();
+    if(GAS_URL) loadCntList();
   }
 });
 
-// URL バナー
+function showLogin(){
+  document.getElementById('LOGIN_SCREEN').style.display='flex';
+}
+function hideLogin(){
+  document.getElementById('LOGIN_SCREEN').style.display='none';
+}
+
+// GAS URL バナー
 function showBanner(){
   var b=document.getElementById('CONFIG_BANNER');
   b.style.display='flex';
@@ -730,23 +833,19 @@ function saveUrl(){
   if(!v){toast('URLを入力してください','er');return;}
   GAS_URL=v; localStorage.setItem(LS_URL,v);
   document.getElementById('CONFIG_BANNER').style.display='none';
-  loadCountryList();
+  loadCntList();
 }
 
-// ═══════════════════════════════════════════════════
-//  国家リスト読込（ログイン用セレクト）
-// ═══════════════════════════════════════════════════
-function loadCountryList(){
-  if(!GAS_URL){ showBanner(); return; }
-  fetch(GAS_URL+'?action=login&country=__LIST__&password=__LIST__')
-    .then(function(r){return r.json();})
-    .catch(function(){return null;});
-  
+// ================================================
+//  国家リスト（ログイン用）
+// ================================================
+function loadCntList(){
+  if(!GAS_URL) return;
   fetch(GAS_URL+'?action=getCountryList')
     .then(function(r){return r.json();})
     .then(function(d){
       var sel=document.getElementById('L_CSEL');
-      sel.innerHTML='<option value="">─ 国家を選択 ─</option>';
+      sel.innerHTML='<option value="">-- 国家を選択 --</option>';
       if(d&&d.countries){
         d.countries.forEach(function(c){
           var o=document.createElement('option');
@@ -755,177 +854,255 @@ function loadCountryList(){
       }
     })
     .catch(function(){
-      // リスト取得失敗 → 手入力に切り替え
-      document.getElementById('L_CSEL').style.display='none';
+      // 失敗時は手入力フォールバック
+      var wrap=document.querySelector('.lsel-wrap');
+      var old=document.getElementById('L_CSEL');
       var inp=document.createElement('input');
-      inp.type='text';inp.id='L_CSEL';
-      inp.className='lcnt-sel';inp.placeholder='国家名を直接入力';
-      inp.style.appearance='auto';
-      document.querySelector('.lcnt-wrap').insertBefore(inp, document.querySelector('.lcnt-arr'));
+      inp.type='text';inp.id='L_CSEL';inp.className='lsel';
+      inp.placeholder='国家名を直接入力';inp.autocomplete='off';
+      inp.style.appearance='auto';inp.style.paddingRight='14px';
+      wrap.replaceChild(inp, old);
     });
 }
 
-// ═══════════════════════════════════════════════════
+// ================================================
 //  ログイン
-// ═══════════════════════════════════════════════════
+// ================================================
 function doLogin(){
   var country = (document.getElementById('L_CSEL').value||'').trim();
-  var pw      = document.getElementById('LPW').value.trim();
-  var err     = document.getElementById('L_ERR');
-  var wrap    = document.getElementById('LPW_WRAP');
+  var pw      = document.getElementById('LPW').value;
+  var errEl   = document.getElementById('L_ERR');
   var btn     = document.getElementById('L_BTN');
 
-  if(!country){ err.textContent='国家を選択してください'; return; }
-  if(!pw)     { err.textContent='パスワードを入力してください'; shakeWrap(); return; }
-  if(!GAS_URL){ showBanner(); return; }
+  if(!country){ errEl.textContent='国家を選択してください'; return; }
+  if(!pw)      { errEl.textContent='パスワードを入力してください'; shake(); return; }
+  if(!GAS_URL) { showBanner(); return; }
 
-  btn.disabled=true;btn.textContent='認証中...';
+  btn.disabled=true; btn.textContent='認証中...';
   showLoading('認証中...');
 
   fetch(GAS_URL+'?action=login&country='+encodeURIComponent(country)+'&password='+encodeURIComponent(pw))
     .then(function(r){return r.json();})
     .then(function(d){
-      hideLoading();btn.disabled=false;btn.textContent='▶ ログイン';
+      hideLoading(); btn.disabled=false; btn.textContent='ログイン';
       if(d&&d.success){
-        SESSION={country:d.country,color:d.color};
-        sessionStorage.setItem(LS_SES,JSON.stringify(SESSION));
-        err.textContent='';
-        document.getElementById('LOGIN_SCREEN').style.display='none';
+        SESSION = { country: d.country, color: d.color, isAdmin: !!d.isAdmin };
+        sessionStorage.setItem(LS_SES, JSON.stringify(SESSION));
+        errEl.textContent='';
+        hideLogin();
         applySession();
         loadMessages();
+        loadNotice();
       } else {
-        err.textContent=d?d.error:'ログインに失敗しました';
-        shakeWrap();
+        errEl.textContent = d ? d.error : 'ログインに失敗しました';
+        shake();
         document.getElementById('LPW').value='';
       }
     })
     .catch(function(e){
-      hideLoading();btn.disabled=false;btn.textContent='▶ ログイン';
-      err.textContent='通信エラー: '+e;
+      hideLoading(); btn.disabled=false; btn.textContent='ログイン';
+      errEl.textContent='通信エラー: '+e;
     });
 }
 
-function shakeWrap(){
+function shake(){
   var w=document.getElementById('LPW_WRAP');
   w.classList.add('err');
-  setTimeout(function(){w.classList.remove('err');},500);
+  setTimeout(function(){w.classList.remove('err');},450);
 }
 
 function toggleEye(){
-  var i=document.getElementById('LPW');
-  var btn=i.nextElementSibling;
-  if(i.type==='password'){i.type='text';btn.textContent='🙈';}
-  else{i.type='password';btn.textContent='👁';}
+  var i=document.getElementById('LPW'), b=document.getElementById('L_EYE');
+  if(i.type==='password'){i.type='text'; b.textContent='非表示';}
+  else{i.type='password'; b.textContent='表示';}
 }
 
-// ═══════════════════════════════════════════════════
-//  セッション適用（ログイン後のホーム表示）
-// ═══════════════════════════════════════════════════
+// ================================================
+//  セッション反映
+// ================================================
 function applySession(){
   if(!SESSION) return;
   document.getElementById('HOME').style.display='block';
-  document.getElementById('H_NATION').textContent=SESSION.country;
-  document.getElementById('H_HERO_NAME').textContent=SESSION.country;
-  document.getElementById('H_HERO_SUB').textContent=SESSION.country+' として操作中';
+  document.getElementById('H_NATION').textContent = SESSION.country;
+  document.getElementById('H_HERO').textContent   = SESSION.country;
 
-  setAccent(SESSION.color);
+  setAccent(SESSION.color||'#3b82f6');
 
-  // 設定モーダルの色プリセット
-  document.getElementById('S_COLOR_TEXT').value=SESSION.color;
-  updColorPreview();
-  document.getElementById('S_COLOR_PICKER').value=SESSION.color;
-  hideLoading();
+  // 設定モーダルの初期値
+  document.getElementById('S_COLOR').value = SESSION.color||'';
+  updSwatchPreview();
+  var picker=document.getElementById('S_PICKER');
+  if(/^#[0-9a-fA-F]{6}$/.test(SESSION.color)) picker.value=SESSION.color;
+
+  // 運営はカラー変更セクションを非表示
+  if(SESSION.isAdmin){
+    document.getElementById('S_COLOR_SEC').style.display='none';
+  }
 }
 
 function setAccent(color){
   if(!color) return;
   document.documentElement.style.setProperty('--uc', color);
-  document.documentElement.style.setProperty('--uc2', darken(color,.25));
-  document.getElementById('H_FLAG').style.background=color;
-  document.getElementById('H_FLAG').style.boxShadow='0 0 14px '+color;
-  // スピナーも更新
+  document.documentElement.style.setProperty('--uc2', darken(color,.28));
+  var flag=document.getElementById('H_FLAG');
+  flag.style.background=color;
+  flag.style.boxShadow='0 0 12px '+color;
+  // スピナー更新
   document.querySelectorAll('.spin').forEach(function(s){s.style.borderTopColor=color;});
-  // BBS投稿ボタン
+  // 投稿ボタン更新
   var pb=document.getElementById('BBS_POST');
-  if(pb)pb.style.background='linear-gradient(135deg,'+color+','+darken(color,.25)+')';
+  if(pb){pb.style.background='linear-gradient(135deg,'+color+','+darken(color,.28)+')';}
 }
 
-// 色を暗くする簡易関数
-function darken(hex,amt){
+function darken(hex,a){
   hex=hex.replace('#','');
   if(hex.length===3) hex=hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
-  var r=Math.max(0,Math.round(parseInt(hex.substr(0,2),16)*(1-amt)));
-  var g=Math.max(0,Math.round(parseInt(hex.substr(2,2),16)*(1-amt)));
-  var b=Math.max(0,Math.round(parseInt(hex.substr(4,2),16)*(1-amt)));
+  var r=Math.max(0,Math.round(parseInt(hex.substr(0,2),16)*(1-a)));
+  var g=Math.max(0,Math.round(parseInt(hex.substr(2,2),16)*(1-a)));
+  var b=Math.max(0,Math.round(parseInt(hex.substr(4,2),16)*(1-a)));
   return '#'+(r<16?'0':'')+r.toString(16)+(g<16?'0':'')+g.toString(16)+(b<16?'0':'')+b.toString(16);
 }
 
-// ═══════════════════════════════════════════════════
+// ================================================
+//  緊急連絡バー
+// ================================================
+function loadNotice(){
+  if(!GAS_URL) return;
+  fetch(GAS_URL+'?action=getNotice')
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d||!d.success) return;
+      applyNotice(d.text, d.active);
+    })
+    .catch(function(){});
+}
+
+function applyNotice(text, active){
+  var bar  = document.getElementById('NOTICE_BAR');
+  var ntxt = document.getElementById('NOTICE_TEXT');
+  NOTICE_ON = active;
+  ntxt.textContent = text || '';
+  if(active && text){
+    bar.classList.add('visible');
+  } else {
+    bar.classList.remove('visible');
+  }
+  // 運営なら編集ボタン表示
+  var editBtn = document.getElementById('NOTICE_EDIT_BTN');
+  if(editBtn) editBtn.style.display = (SESSION&&SESSION.isAdmin) ? 'block' : 'none';
+}
+
+function openNoticeModal(){
+  if(!SESSION||!SESSION.isAdmin) return;
+  // 現在の値をフォームに反映
+  var ntxt = document.getElementById('NOTICE_TEXT').textContent;
+  document.getElementById('N_TEXT').value = ntxt;
+  updNoticePreview();
+  var tog = document.getElementById('N_TOGGLE');
+  tog.classList.toggle('on', NOTICE_ON);
+  document.getElementById('N_STATUS').textContent = NOTICE_ON ? 'ON' : 'OFF';
+  document.getElementById('M_NOTICE').classList.add('on');
+}
+function closeNoticeModal(){ document.getElementById('M_NOTICE').classList.remove('on'); }
+
+function updNoticePreview(){
+  var v=document.getElementById('N_TEXT').value;
+  document.getElementById('N_PREVIEW').textContent=v;
+}
+
+function toggleNotice(){
+  var tog=document.getElementById('N_TOGGLE');
+  var stat=document.getElementById('N_STATUS');
+  NOTICE_ON = !NOTICE_ON;
+  tog.classList.toggle('on', NOTICE_ON);
+  stat.textContent = NOTICE_ON ? 'ON' : 'OFF';
+}
+
+function saveNotice(){
+  if(!SESSION||!SESSION.isAdmin) return;
+  var text   = document.getElementById('N_TEXT').value.trim();
+  var active = NOTICE_ON ? '1' : '0';
+  var btn    = document.getElementById('N_SAVE_BTN');
+  btn.disabled=true; btn.textContent='保存中...';
+
+  var url = GAS_URL+'?action=setNotice'+
+    '&adminPW='+encodeURIComponent(ADMIN_PW)+
+    '&text='+encodeURIComponent(text)+
+    '&active='+active;
+
+  fetch(url)
+    .then(function(r){return r.json();})
+    .then(function(d){
+      btn.disabled=false; btn.textContent='この内容で保存する';
+      if(d&&d.success){
+        applyNotice(text, NOTICE_ON);
+        closeNoticeModal();
+        toast('緊急連絡を更新しました','ok');
+      } else {
+        toast('保存エラー: '+(d?d.error:'不明'),'er');
+      }
+    })
+    .catch(function(e){
+      btn.disabled=false; btn.textContent='この内容で保存する';
+      toast('通信エラー: '+e,'er');
+    });
+}
+
+// ================================================
 //  掲示板
-// ═══════════════════════════════════════════════════
+// ================================================
 function loadMessages(){
   if(!GAS_URL) return;
   fetch(GAS_URL+'?action=getMessages')
     .then(function(r){return r.json();})
     .then(function(d){
-      if(d&&d.success) renderMessages(d.messages||[]);
+      if(d&&d.success) renderMsgs(d.messages||[]);
     })
     .catch(function(){});
 }
 
-function renderMessages(msgs){
-  var el=document.getElementById('BBS_MSGS');
-  var cnt=document.getElementById('BBS_COUNT');
-  cnt.textContent=msgs.length+'件';
+function renderMsgs(msgs){
+  var el  = document.getElementById('BBS_MSGS');
+  var cnt = document.getElementById('BBS_COUNT');
+  cnt.textContent = msgs.length+'件';
   if(!msgs.length){
-    el.innerHTML='<div class="bbs-empty">📭 まだメッセージはありません</div>';
+    el.innerHTML='<div class="bbs-empty">メッセージはまだありません</div>';
     return;
   }
   el.innerHTML='';
   msgs.forEach(function(m){
-    var isMe= SESSION && norm(m.author)===norm(SESSION.country);
-    var isAdmin= m.isAdmin;
-    var canDel= (SESSION && SESSION.country==='運営') || isAdmin;
-
-    // 著者の色を取得（CNTS不要、セッションカラー使用）
-    var flagColor= isMe ? (SESSION.color||'#3b82f6') : '#2e4260';
+    var isMe    = SESSION && norm(m.author)===norm(SESSION.country);
+    var flagCol = isMe ? (SESSION.color||'#3b82f6') : '#2e4260';
 
     var div=document.createElement('div');
     div.className='msg-item';
-    div.dataset.row=m.id;
     div.innerHTML=
       '<div class="msg-header">'+
-        '<div class="msg-flag" style="background:'+esc(flagColor)+'"></div>'+
+        '<div class="msg-flag" style="background:'+esc(flagCol)+'"></div>'+
         '<span class="msg-author">'+esc(m.author)+'</span>'+
-        (isAdmin?'<span class="msg-admin-badge">運営</span>':'')+
+        (m.isAdmin ? '<span class="msg-admin-tag">運営</span>' : '')+
         '<span class="msg-time">'+esc(m.timestamp)+'</span>'+
       '</div>'+
       '<div class="msg-text">'+esc(m.text)+'</div>'+
-      '<button class="msg-del" onclick="delMsg('+m.id+',this)" data-row="'+m.id+'">削除</button>';
-
-    // 削除ボタン表示（運営パスワード所持者、または自分の投稿）
-    var delBtn=div.querySelector('.msg-del');
-    if(delBtn && (SESSION&&SESSION.country==='運営')){
-      delBtn.style.display='block';
-    }
+      (SESSION&&SESSION.isAdmin
+        ? '<button class="msg-del" onclick="delMsg('+m.id+')">削除</button>'
+        : '');
     el.appendChild(div);
   });
 }
 
-function updCharCount(){
-  var t=document.getElementById('BBS_TEXT').value;
-  document.getElementById('BBS_CHAR').textContent=t.length+' / 500';
+function updChar(){
+  var v=document.getElementById('BBS_TEXT').value;
+  document.getElementById('BBS_CHAR').textContent=v.length+' / 500';
 }
 
 function postMsg(){
   if(!SESSION){toast('ログインしてください','er');return;}
   var text=document.getElementById('BBS_TEXT').value.trim();
   if(!text){toast('メッセージを入力してください','wa');return;}
-  if(text.length>500){toast('500文字以内にしてください','er');return;}
-
-  var isAdmin= (SESSION.country==='運営')?'1':'0';
+  var isAdmin=(SESSION.isAdmin)?'1':'0';
   var btn=document.getElementById('BBS_POST');
-  btn.disabled=true;btn.textContent='投稿中';
+  btn.disabled=true; btn.textContent='投稿中';
 
   var url=GAS_URL+'?action=postMessage'+
     '&author='+encodeURIComponent(SESSION.country)+
@@ -935,10 +1112,10 @@ function postMsg(){
   fetch(url)
     .then(function(r){return r.json();})
     .then(function(d){
-      btn.disabled=false;btn.textContent='投稿';
+      btn.disabled=false; btn.textContent='投稿';
       if(d&&d.success){
         document.getElementById('BBS_TEXT').value='';
-        updCharCount();
+        updChar();
         toast('投稿しました','ok');
         loadMessages();
       } else {
@@ -946,115 +1123,99 @@ function postMsg(){
       }
     })
     .catch(function(e){
-      btn.disabled=false;btn.textContent='投稿';
+      btn.disabled=false; btn.textContent='投稿';
       toast('通信エラー: '+e,'er');
     });
 }
 
-function delMsg(rowNum, btn){
+function delMsg(rowNum){
   if(!confirm('このメッセージを削除しますか？')) return;
   var url=GAS_URL+'?action=deleteMessage&rowNum='+rowNum+'&adminPW='+encodeURIComponent(ADMIN_PW);
-  fetch(url)
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(d&&d.success){toast('削除しました','ok');loadMessages();}
-      else toast('削除エラー: '+(d?d.error:'不明'),'er');
-    });
+  fetch(url).then(function(r){return r.json();}).then(function(d){
+    if(d&&d.success){toast('削除しました','ok');loadMessages();}
+    else toast('削除エラー: '+(d?d.error:'不明'),'er');
+  });
 }
 
-// ═══════════════════════════════════════════════════
+// ================================================
 //  設定モーダル
-// ═══════════════════════════════════════════════════
-function openSettings(){document.getElementById('SETTINGS_MODAL').classList.add('on');}
-function closeSettings(){document.getElementById('SETTINGS_MODAL').classList.remove('on');}
-function handleOvClick(e){if(e.target===document.getElementById('SETTINGS_MODAL'))closeSettings();}
+// ================================================
+function openSettings(){
+  document.getElementById('S_OLD').value='';
+  document.getElementById('S_NEW').value='';
+  document.getElementById('S_NEW2').value='';
+  document.getElementById('M_SETTINGS').classList.add('on');
+}
+function closeSettings(){ document.getElementById('M_SETTINGS').classList.remove('on'); }
 
 // パスワード変更
 function changePW(){
   if(!SESSION) return;
-  var oldPW = document.getElementById('S_OLD_PW').value.trim();
-  var newPW = document.getElementById('S_NEW_PW').value.trim();
-  var newPW2= document.getElementById('S_NEW_PW2').value.trim();
+  if(SESSION.isAdmin){toast('運営パスワードはコードで管理されています','wa');return;}
+  var oldPW = document.getElementById('S_OLD').value.trim();
+  var newPW = document.getElementById('S_NEW').value.trim();
+  var newPW2= document.getElementById('S_NEW2').value.trim();
   if(!oldPW){toast('現在のパスワードを入力してください','wa');return;}
   if(!newPW){toast('新しいパスワードを入力してください','wa');return;}
   if(newPW!==newPW2){toast('新しいパスワードが一致しません','er');return;}
   if(newPW.length<4){toast('4文字以上にしてください','wa');return;}
 
   var btn=document.getElementById('S_PW_BTN');
-  btn.disabled=true;btn.textContent='変更中...';
-
-  var url=GAS_URL+'?action=changePassword'+
-    '&country='+encodeURIComponent(SESSION.country)+
-    '&oldPW='+encodeURIComponent(oldPW)+
-    '&newPW='+encodeURIComponent(newPW);
-
-  fetch(url)
-    .then(function(r){return r.json();})
-    .then(function(d){
-      btn.disabled=false;btn.textContent='パスワードを変更';
-      if(d&&d.success){
-        toast('✓ パスワードを変更しました','ok');
-        document.getElementById('S_OLD_PW').value='';
-        document.getElementById('S_NEW_PW').value='';
-        document.getElementById('S_NEW_PW2').value='';
-        closeSettings();
-      } else {
-        toast((d?d.error:'変更エラー'),'er');
-      }
-    })
-    .catch(function(e){
-      btn.disabled=false;btn.textContent='パスワードを変更';
-      toast('通信エラー: '+e,'er');
-    });
+  btn.disabled=true; btn.textContent='変更中...';
+  var url=GAS_URL+'?action=changePassword&country='+encodeURIComponent(SESSION.country)+
+    '&oldPW='+encodeURIComponent(oldPW)+'&newPW='+encodeURIComponent(newPW);
+  fetch(url).then(function(r){return r.json();}).then(function(d){
+    btn.disabled=false; btn.textContent='パスワードを変更する';
+    if(d&&d.success){
+      toast('パスワードを変更しました','ok');
+      closeSettings();
+    } else {
+      toast(d?d.error:'変更エラー','er');
+    }
+  }).catch(function(e){
+    btn.disabled=false; btn.textContent='パスワードを変更する';
+    toast('通信エラー: '+e,'er');
+  });
 }
 
 // カラー変更
-function updColorPreview(){
-  var val=document.getElementById('S_COLOR_TEXT').value.trim();
-  var sw=document.getElementById('S_COLOR_SWATCH');
-  if(/^#[0-9a-fA-F]{3,6}$/.test(val)){
-    sw.style.background=val;
-    sw.style.boxShadow='0 0 12px '+val+'66';
+function updSwatchPreview(){
+  var v=document.getElementById('S_COLOR').value.trim();
+  var sw=document.getElementById('S_SWATCH');
+  if(/^#[0-9a-fA-F]{3,6}$/.test(v)){
+    sw.style.background=v;
+    sw.style.boxShadow='0 0 10px '+v+'88';
   } else {
-    sw.style.background='#1e2d45';sw.style.boxShadow='none';
+    sw.style.background='var(--s3)';sw.style.boxShadow='none';
   }
 }
-function onColorPick(){
-  var col=document.getElementById('S_COLOR_PICKER').value;
-  document.getElementById('S_COLOR_TEXT').value=col;
-  updColorPreview();
+function onPickerChange(){
+  var c=document.getElementById('S_PICKER').value;
+  document.getElementById('S_COLOR').value=c;
+  updSwatchPreview();
 }
-
 function changeColor(){
-  if(!SESSION) return;
-  var color=document.getElementById('S_COLOR_TEXT').value.trim();
-  if(!/^#[0-9a-fA-F]{3,6}$/.test(color)){toast('有効なカラーコードを入力してください（例: #3b82f6）','wa');return;}
-
+  if(!SESSION||SESSION.isAdmin) return;
+  var color=document.getElementById('S_COLOR').value.trim();
+  if(!/^#[0-9a-fA-F]{3,6}$/.test(color)){toast('有効なカラーコードを入力してください','wa');return;}
   var btn=document.getElementById('S_COLOR_BTN');
-  btn.disabled=true;btn.textContent='変更中...';
-
-  var url=GAS_URL+'?action=changeColor'+
-    '&country='+encodeURIComponent(SESSION.country)+
-    '&color='+encodeURIComponent(color);
-
-  fetch(url)
-    .then(function(r){return r.json();})
-    .then(function(d){
-      btn.disabled=false;btn.textContent='カラーを変更';
-      if(d&&d.success){
-        SESSION.color=color;
-        sessionStorage.setItem(LS_SES,JSON.stringify(SESSION));
-        setAccent(color);
-        toast('✓ カラーを変更しました','ok');
-        closeSettings();
-      } else {
-        toast((d?d.error:'変更エラー'),'er');
-      }
-    })
-    .catch(function(e){
-      btn.disabled=false;btn.textContent='カラーを変更';
-      toast('通信エラー: '+e,'er');
-    });
+  btn.disabled=true; btn.textContent='変更中...';
+  var url=GAS_URL+'?action=changeColor&country='+encodeURIComponent(SESSION.country)+'&color='+encodeURIComponent(color);
+  fetch(url).then(function(r){return r.json();}).then(function(d){
+    btn.disabled=false; btn.textContent='カラーを変更する';
+    if(d&&d.success){
+      SESSION.color=color;
+      sessionStorage.setItem(LS_SES,JSON.stringify(SESSION));
+      setAccent(color);
+      toast('カラーを変更しました','ok');
+      closeSettings();
+    } else {
+      toast(d?d.error:'変更エラー','er');
+    }
+  }).catch(function(e){
+    btn.disabled=false; btn.textContent='カラーを変更する';
+    toast('通信エラー: '+e,'er');
+  });
 }
 
 // ログアウト
@@ -1063,23 +1224,28 @@ function doLogout(){
   SESSION=null;
   sessionStorage.removeItem(LS_SES);
   document.getElementById('HOME').style.display='none';
-  document.getElementById('LOGIN_SCREEN').style.display='flex';
+  document.getElementById('NOTICE_BAR').classList.remove('visible');
   closeSettings();
   document.getElementById('LPW').value='';
   document.getElementById('L_ERR').textContent='';
   toast('ログアウトしました','ok');
-  if(GAS_URL) loadCountryList();
+  showLogin();
+  if(GAS_URL) loadCntList();
 }
 
-// ═══════════════════════════════════════════════════
+// ================================================
 //  ユーティリティ
-// ═══════════════════════════════════════════════════
+// ================================================
 function norm(s){return String(s||'').trim().toLowerCase();}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function showLoading(t){document.getElementById('LOV_TXT').textContent=t||'LOADING...';document.getElementById('LOV').classList.add('on');}
 function hideLoading(){document.getElementById('LOV').classList.remove('on');}
 var _tt;
-function toast(msg,type){var el=document.getElementById('TOAST');el.textContent=msg;el.className='toast on '+(type||'');clearTimeout(_tt);_tt=setTimeout(function(){el.className='toast';},3500);}
+function toast(msg,type){
+  var el=document.getElementById('TOAST');
+  el.textContent=msg;el.className='toast on '+(type||'');
+  clearTimeout(_tt);_tt=setTimeout(function(){el.className='toast';},3500);
+}
 </script>
 </body>
 </html>
