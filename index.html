@@ -5,807 +5,321 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>地図管理システム</title>
 <style>
-/* ============================================================
-   リセット & CSS変数
-============================================================ */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-:root {
-  --bg:        #080b10;
-  --surface:   #0e1420;
-  --surface2:  #161f30;
-  --surface3:  #1e2a3e;
-  --border:    #253347;
-  --border2:   #1a2538;
-  --text:      #ccd8ee;
-  --text2:     #6e84a3;
-  --text3:     #3d5070;
-  --accent:    #3b82f6;
-  --accent2:   #1d4ed8;
-  --accent-g:  #10b981;
-  --accent-r:  #ef4444;
-  --accent-y:  #f59e0b;
-  --modal-bg:  rgba(4,8,15,0.9);
-  --radius:    10px;
-  --radius-lg: 16px;
-  --ff:        'Courier New', 'Noto Sans JP', monospace;
+/* ─── リセット & 変数 ─────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--s1:#0d1220;--s2:#121a2c;--s3:#192236;
+  --bd:#1e2d45;--bd2:#152035;
+  --t1:#c8d8f0;--t2:#607898;--t3:#2e4260;
+  --ac:#3b82f6;--ag:#10b981;--ar:#ef4444;--ay:#f59e0b;
+  --r:10px;--rl:16px;
 }
-
-html { height: 100%; }
-
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--ff);
-  min-height: 100vh;
-  font-size: 13px;
-  overscroll-behavior: none;
-  /* subtle grid texture */
+html{height:100%}
+body{
+  background:var(--bg);color:var(--t1);
+  font-family:'Courier New','Noto Sans JP',monospace;
+  font-size:13px;min-height:100vh;
   background-image:
-    linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
-}
-
-/* ============================================================
-   ヘッダー
-============================================================ */
-.header {
-  background: linear-gradient(180deg, #0d1625 0%, var(--surface) 100%);
-  border-bottom: 1px solid var(--border);
-  padding: 10px 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: sticky;
-  top: 0;
-  z-index: 200;
-  box-shadow: 0 2px 20px rgba(0,0,0,0.5);
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.header-icon {
-  width: 32px;
-  height: 32px;
-  background: linear-gradient(135deg, var(--accent) 0%, #1d4ed8 100%);
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  box-shadow: 0 0 12px rgba(59,130,246,0.4);
-}
-
-.header h1 {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text);
-  letter-spacing: 2px;
-  text-transform: uppercase;
-}
-
-.header-sub {
-  font-size: 9px;
-  color: var(--text3);
-  letter-spacing: 1px;
-}
-
-.status-badge {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 10px;
-  padding: 4px 10px;
-  border-radius: 20px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  color: var(--text2);
-  letter-spacing: 0.5px;
-}
-
-.status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent-g);
-  box-shadow: 0 0 6px var(--accent-g);
-  animation: pulse-dot 2s ease-in-out infinite;
-}
-
-.status-dot.loading { background: var(--accent-y); box-shadow: 0 0 6px var(--accent-y); }
-.status-dot.error   { background: var(--accent-r); box-shadow: 0 0 6px var(--accent-r); animation: none; }
-
-@keyframes pulse-dot {
-  0%,100% { opacity: 1; }
-  50%      { opacity: 0.4; }
-}
-
-/* ============================================================
-   マップセクション
-============================================================ */
-.map-section {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  position: relative;
-}
-
-.map-label {
-  font-size: 9px;
-  letter-spacing: 2px;
-  color: var(--text3);
-  text-transform: uppercase;
-  padding: 6px 14px 0;
-}
-
-.map-scroll {
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
-}
-
-.map-scroll::-webkit-scrollbar { height: 3px; }
-.map-scroll::-webkit-scrollbar-track { background: transparent; }
-.map-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-#svg-container {
-  min-width: 320px;
-  padding: 8px;
-}
-
-#svg-container svg {
-  display: block;
-  width: 100%;
-  height: auto;
-  /* 背景をダークに上書き */
-  background-color: #080b10 !important;
-}
-
-/* SVGパスのホバー */
-#svg-container path,
-#svg-container g[id] > path {
-  transition: filter 0.2s, stroke-width 0.15s;
-  cursor: pointer;
-}
-
-#svg-container path:hover {
-  filter: brightness(1.4);
-}
-
-/* ============================================================
-   モード切替タブ
-============================================================ */
-.mode-tabs {
-  display: flex;
-  background: var(--surface2);
-  border-bottom: 1px solid var(--border);
-}
-
-.mode-tab {
-  flex: 1;
-  padding: 9px 6px;
-  background: none;
-  border: none;
-  color: var(--text2);
-  font-family: var(--ff);
-  font-size: 11px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: all 0.2s;
-}
-
-.mode-tab.active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
-  background: rgba(59,130,246,0.05);
-}
-
-/* ステータス選択タブ */
-.stat-select-bar {
-  display: none;
-  padding: 8px 12px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  overflow-x: auto;
-  gap: 6px;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-
-.stat-select-bar::-webkit-scrollbar { display: none; }
-.stat-select-bar.visible { display: flex; }
-
-.stat-chip {
-  white-space: nowrap;
-  padding: 5px 12px;
-  border-radius: 20px;
-  border: 1px solid var(--border);
-  background: var(--surface2);
-  color: var(--text2);
-  font-family: var(--ff);
-  font-size: 10px;
-  letter-spacing: 0.5px;
-  cursor: pointer;
-  transition: all 0.2s;
-  flex-shrink: 0;
-}
-
-.stat-chip.active {
-  background: linear-gradient(135deg, rgba(16,185,129,0.2), rgba(239,68,68,0.2));
-  border-color: var(--accent-g);
-  color: var(--text);
-}
-
-/* ============================================================
-   メインコンテンツ
-============================================================ */
-.content {
-  padding: 12px;
-  padding-bottom: 80px;
-}
-
-.section-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-  color: var(--text3);
-  font-size: 9px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-}
-
-.section-head::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, var(--border), transparent);
-}
-
-/* 検索バー */
-.search-wrap {
-  display: flex;
-  align-items: center;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 8px 12px;
-  margin-bottom: 12px;
-  gap: 8px;
-  transition: border-color 0.2s;
-}
-
-.search-wrap:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
-}
-
-.search-wrap input {
-  flex: 1;
-  background: none;
-  border: none;
-  color: var(--text);
-  font-family: var(--ff);
-  font-size: 13px;
-  outline: none;
-}
-
-.search-wrap input::placeholder { color: var(--text3); }
-
-.search-icon { color: var(--text3); font-size: 14px; }
-
-/* ステートカードグリッド */
-.state-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 7px;
-}
-
-.state-card {
-  background: var(--surface2);
-  border: 1px solid var(--border2);
-  border-radius: var(--radius);
-  padding: 10px 11px;
-  cursor: pointer;
-  transition: all 0.18s;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  position: relative;
-  overflow: hidden;
-}
-
-.state-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.02), transparent);
-  pointer-events: none;
-}
-
-.state-card:active,
-.state-card:hover {
-  border-color: var(--accent);
-  background: var(--surface3);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-}
-
-.state-swatch {
-  width: 10px;
-  height: 32px;
-  border-radius: 3px;
-  flex-shrink: 0;
-  border: 1px solid rgba(255,255,255,0.1);
-}
-
-.state-info { flex: 1; min-width: 0; }
-
-.state-name {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  letter-spacing: 0.3px;
-}
-
-.state-country {
-  font-size: 9px;
-  color: var(--text2);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-top: 2px;
-  letter-spacing: 0.3px;
-}
-
-.state-arrow { color: var(--text3); font-size: 10px; flex-shrink: 0; }
-
-.empty-state {
-  text-align: center;
-  padding: 48px 20px;
-  color: var(--text3);
-  font-size: 12px;
-  letter-spacing: 1px;
-}
-
-/* ============================================================
-   モーダル
-============================================================ */
-.modal-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: var(--modal-bg);
-  z-index: 500;
-  align-items: flex-end;
-  justify-content: center;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-}
-
-.modal-overlay.open { display: flex; }
-
-.modal {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  width: 100%;
-  max-width: 640px;
-  max-height: 88vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 -8px 40px rgba(0,0,0,0.6);
-  animation: slide-up 0.28s cubic-bezier(0.22,1,0.36,1);
-}
-
-@keyframes slide-up {
-  from { transform: translateY(100%); }
-  to   { transform: translateY(0); }
-}
-
-.modal-handle-bar {
-  display: flex;
-  justify-content: center;
-  padding: 10px 0 4px;
-}
-
-.modal-handle {
-  width: 36px;
-  height: 4px;
-  background: var(--border);
-  border-radius: 2px;
-}
-
-.modal-header {
-  padding: 8px 16px 12px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.modal-state-color-bar {
-  width: 4px;
-  height: 40px;
-  border-radius: 2px;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.modal-titles { flex: 1; }
-.modal-tag {
-  font-size: 8px;
-  color: var(--text3);
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  margin-bottom: 3px;
-}
-
-.modal-state-name {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text);
-  letter-spacing: 1px;
-}
-
-.modal-state-country-label {
-  font-size: 10px;
-  color: var(--text2);
-  margin-top: 3px;
-}
-
-.modal-close {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  color: var(--text2);
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  cursor: pointer;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-family: var(--ff);
-}
-
-.modal-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 14px 16px;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* フォーム部品 */
-.form-group { margin-bottom: 14px; }
-
-.form-label {
-  display: block;
-  font-size: 9px;
-  color: var(--text3);
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  margin-bottom: 6px;
-}
-
-.form-select {
-  width: 100%;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  color: var(--text);
-  padding: 10px 40px 10px 12px;
-  border-radius: var(--radius);
-  font-family: var(--ff);
-  font-size: 13px;
-  outline: none;
-  appearance: none;
-  -webkit-appearance: none;
-  transition: border-color 0.2s;
-  cursor: pointer;
-}
-
-.form-select:focus { border-color: var(--accent); }
-
-.select-wrapper {
-  position: relative;
-}
-
-.select-arrow {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  pointer-events: none;
-  color: var(--text3);
-  font-size: 10px;
-}
-
-.country-preview-strip {
-  height: 4px;
-  border-radius: 0 0 var(--radius) var(--radius);
-  transition: background 0.3s;
-  margin-top: -4px;
-}
-
-/* ステータス行 */
-.stat-section-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 9px;
-  color: var(--text3);
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  margin: 16px 0 10px;
-}
-
-.stat-section-title::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-}
-
-.stat-row {
-  background: var(--surface2);
-  border: 1px solid var(--border2);
-  border-radius: var(--radius);
-  padding: 10px 12px;
-  margin-bottom: 8px;
-  transition: border-color 0.2s;
-}
-
-.stat-row:focus-within { border-color: var(--border); }
-
-.stat-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.stat-key {
-  font-size: 11px;
-  color: var(--text2);
-  letter-spacing: 0.5px;
-}
-
-.stat-num-input {
-  width: 72px;
-  background: var(--surface3);
-  border: 1px solid var(--border);
-  color: var(--text);
-  padding: 5px 8px;
-  border-radius: 6px;
-  font-family: var(--ff);
-  font-size: 12px;
-  text-align: right;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.stat-num-input:focus { border-color: var(--accent); }
-
-/* スライダー */
-.stat-slider {
-  width: 100%;
-  -webkit-appearance: none;
-  height: 4px;
-  border-radius: 2px;
-  outline: none;
-  cursor: pointer;
-  /* グラジエントはJSで動的に設定 */
-}
-
-.stat-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #fff;
-  border: 2px solid var(--accent);
-  box-shadow: 0 0 6px rgba(59,130,246,0.4);
-  cursor: pointer;
-}
-
-.stat-slider::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #fff;
-  border: 2px solid var(--accent);
-  cursor: pointer;
-}
-
-/* カラーバー */
-.stat-color-track {
-  height: 4px;
-  border-radius: 2px;
-  margin-top: 6px;
-  background: linear-gradient(90deg, #ef4444 0%, #f59e0b 50%, #10b981 100%);
-  position: relative;
-  overflow: visible;
-}
-
-.stat-color-indicator {
-  position: absolute;
-  top: -3px;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  border: 2px solid #fff;
-  box-shadow: 0 0 6px rgba(0,0,0,0.5);
-  transform: translateX(-50%);
-  transition: left 0.15s;
-}
-
-/* ============================================================
-   アクションボタン
-============================================================ */
-.modal-footer {
-  padding: 12px 16px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  gap: 8px;
-  background: var(--surface);
-  padding-bottom: max(12px, env(safe-area-inset-bottom, 12px));
-}
-
-.btn {
-  flex: 1;
-  padding: 13px 10px;
-  border: none;
-  border-radius: var(--radius);
-  font-family: var(--ff);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-cancel {
-  background: var(--surface2);
-  color: var(--text2);
-  border: 1px solid var(--border);
-}
-
-.btn-cancel:active { background: var(--surface3); }
-
-.btn-save {
-  background: linear-gradient(135deg, var(--accent) 0%, #1d4ed8 100%);
-  color: #fff;
-  box-shadow: 0 4px 16px rgba(59,130,246,0.35);
-}
-
-.btn-save:active {
-  transform: scale(0.98);
-  box-shadow: 0 2px 8px rgba(59,130,246,0.2);
-}
-
-.btn-save:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-}
-
-/* ============================================================
-   ローディング / トースト
-============================================================ */
-.loading-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(4,8,15,0.85);
-  z-index: 900;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-}
-
-.loading-overlay.visible { display: flex; }
-
-.spinner {
-  width: 44px;
-  height: 44px;
-  border: 3px solid var(--border);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.loading-text {
-  color: var(--text2);
-  font-size: 11px;
-  letter-spacing: 2px;
-}
-
-.toast {
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%) translateY(20px);
-  background: var(--surface2);
-  color: var(--text);
-  padding: 10px 20px;
-  border-radius: 20px;
-  border: 1px solid var(--border);
-  font-size: 12px;
-  letter-spacing: 0.5px;
-  z-index: 1000;
-  opacity: 0;
-  transition: all 0.3s cubic-bezier(0.22,1,0.36,1);
-  pointer-events: none;
-  white-space: nowrap;
-  max-width: 90vw;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.toast.visible {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-
-.toast.success { border-color: var(--accent-g); color: var(--accent-g); }
-.toast.error   { border-color: var(--accent-r); color: var(--accent-r); }
+    linear-gradient(rgba(59,130,246,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(59,130,246,.025) 1px,transparent 1px);
+  background-size:44px 44px;
+}
+
+/* ─── 設定バナー（URLが空のときのみ表示） ─── */
+#config-banner{
+  background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(239,68,68,.1));
+  border-bottom:1px solid rgba(245,158,11,.4);
+  padding:10px 14px;
+  display:flex;align-items:center;gap:10px;
+  font-size:11px;color:#f59e0b;letter-spacing:.5px;
+}
+#config-banner input{
+  flex:1;background:rgba(0,0,0,.4);border:1px solid rgba(245,158,11,.4);
+  color:#fde68a;font-family:inherit;font-size:11px;
+  padding:6px 10px;border-radius:6px;outline:none;
+}
+#config-banner input:focus{border-color:#f59e0b}
+#config-banner button{
+  background:rgba(245,158,11,.25);border:1px solid rgba(245,158,11,.5);
+  color:#f59e0b;font-family:inherit;font-size:10px;
+  padding:6px 12px;border-radius:6px;cursor:pointer;
+  letter-spacing:1px;white-space:nowrap;
+}
+#config-banner button:active{background:rgba(245,158,11,.4)}
+
+/* ─── ヘッダー ─────────────────────────────────── */
+.hdr{
+  background:linear-gradient(180deg,#0b1422 0%,var(--s1) 100%);
+  border-bottom:1px solid var(--bd);
+  padding:10px 14px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:200;
+  box-shadow:0 2px 20px rgba(0,0,0,.5);
+}
+.hdr-l{display:flex;align-items:center;gap:10px}
+.hdr-ico{
+  width:32px;height:32px;border-radius:6px;
+  background:linear-gradient(135deg,var(--ac),#1d4ed8);
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;box-shadow:0 0 12px rgba(59,130,246,.4);
+}
+.hdr h1{font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+.hdr-sub{font-size:9px;color:var(--t3);letter-spacing:1px}
+.sbadge{
+  display:flex;align-items:center;gap:5px;
+  font-size:10px;padding:4px 10px;border-radius:20px;
+  background:var(--s2);border:1px solid var(--bd);color:var(--t2);
+  letter-spacing:.5px;
+}
+.sdot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--ag);box-shadow:0 0 6px var(--ag);
+  animation:pdot 2s ease-in-out infinite;
+}
+.sdot.ld{background:var(--ay);box-shadow:0 0 6px var(--ay)}
+.sdot.er{background:var(--ar);box-shadow:0 0 6px var(--ar);animation:none}
+@keyframes pdot{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ─── マップ ────────────────────────────────────── */
+.map-wrap{background:var(--s1);border-bottom:1px solid var(--bd)}
+.map-lbl{font-size:9px;letter-spacing:2px;color:var(--t3);text-transform:uppercase;padding:6px 14px 0}
+.map-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--bd) transparent}
+.map-scroll::-webkit-scrollbar{height:3px}
+.map-scroll::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px}
+#svg-wrap{min-width:320px;padding:8px}
+#svg-wrap svg{display:block;width:100%;height:auto;background-color:#07090f!important}
+#svg-wrap path{transition:filter .2s;cursor:pointer}
+#svg-wrap path:hover{filter:brightness(1.5)}
+
+/* ─── モードタブ ─────────────────────────────────── */
+.tabs{display:flex;background:var(--s2);border-bottom:1px solid var(--bd)}
+.tab{
+  flex:1;padding:9px 6px;background:none;border:none;
+  color:var(--t2);font-family:inherit;font-size:11px;
+  letter-spacing:1px;text-transform:uppercase;cursor:pointer;
+  border-bottom:2px solid transparent;transition:all .2s;
+}
+.tab.on{color:var(--ac);border-bottom-color:var(--ac);background:rgba(59,130,246,.05)}
+
+/* ステータスチップ */
+.chips{
+  display:none;padding:8px 12px;background:var(--s1);
+  border-bottom:1px solid var(--bd);overflow-x:auto;gap:6px;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none;
+}
+.chips::-webkit-scrollbar{display:none}
+.chips.on{display:flex}
+.chip{
+  white-space:nowrap;padding:5px 12px;border-radius:20px;
+  border:1px solid var(--bd);background:var(--s2);
+  color:var(--t2);font-family:inherit;font-size:10px;
+  letter-spacing:.5px;cursor:pointer;transition:all .2s;flex-shrink:0;
+}
+.chip.on{border-color:var(--ag);background:rgba(16,185,129,.1);color:var(--t1)}
+
+/* ─── コンテンツ ─────────────────────────────────── */
+.cnt{padding:12px;padding-bottom:80px}
+.sec-hd{
+  display:flex;align-items:center;gap:8px;
+  margin-bottom:10px;color:var(--t3);font-size:9px;
+  letter-spacing:2px;text-transform:uppercase;
+}
+.sec-hd::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--bd),transparent)}
+
+/* 検索 */
+.srch{
+  display:flex;align-items:center;background:var(--s2);
+  border:1px solid var(--bd);border-radius:var(--r);
+  padding:8px 12px;margin-bottom:12px;gap:8px;
+  transition:border-color .2s;
+}
+.srch:focus-within{border-color:var(--ac);box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+.srch input{flex:1;background:none;border:none;color:var(--t1);font-family:inherit;font-size:13px;outline:none}
+.srch input::placeholder{color:var(--t3)}
+
+/* グリッド */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(142px,1fr));gap:7px}
+.card{
+  background:var(--s2);border:1px solid var(--bd2);
+  border-radius:var(--r);padding:10px 11px;cursor:pointer;
+  transition:all .18s;display:flex;align-items:center;gap:8px;
+  position:relative;overflow:hidden;
+}
+.card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.015),transparent);pointer-events:none}
+.card:hover,.card:active{border-color:var(--ac);background:var(--s3);transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.35)}
+.swatch{width:10px;height:32px;border-radius:3px;flex-shrink:0;border:1px solid rgba(255,255,255,.08)}
+.cinfo{flex:1;min-width:0}
+.cname{font-size:11px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.3px}
+.ccountry{font-size:9px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.carr{color:var(--t3);font-size:10px;flex-shrink:0}
+.empty{text-align:center;padding:48px 20px;color:var(--t3);font-size:12px;letter-spacing:1px}
+
+/* ─── モーダル ───────────────────────────────────── */
+.mover{
+  display:none;position:fixed;inset:0;background:rgba(3,6,12,.88);
+  z-index:500;align-items:flex-end;justify-content:center;
+  backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);
+}
+.mover.on{display:flex}
+.modal{
+  background:var(--s1);border:1px solid var(--bd);
+  border-radius:var(--rl) var(--rl) 0 0;
+  width:100%;max-width:640px;max-height:88vh;
+  overflow:hidden;display:flex;flex-direction:column;
+  box-shadow:0 -8px 40px rgba(0,0,0,.65);
+  animation:sup .28s cubic-bezier(.22,1,.36,1);
+}
+@keyframes sup{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.mhandle{display:flex;justify-content:center;padding:10px 0 4px}
+.mbar{width:36px;height:4px;background:var(--bd);border-radius:2px}
+.mhdr{
+  padding:8px 16px 12px;border-bottom:1px solid var(--bd);
+  display:flex;align-items:flex-start;gap:12px;
+}
+.mcolorbar{width:4px;height:40px;border-radius:2px;flex-shrink:0;margin-top:2px}
+.mtitles{flex:1}
+.mtag{font-size:8px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px}
+.mname{font-size:18px;font-weight:700;color:var(--t1);letter-spacing:1px}
+.msub{font-size:10px;color:var(--t2);margin-top:3px}
+.mclose{
+  background:var(--s2);border:1px solid var(--bd);color:var(--t2);
+  width:30px;height:30px;border-radius:50%;cursor:pointer;
+  font-size:14px;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;font-family:inherit;
+}
+.mbody{flex:1;overflow-y:auto;padding:14px 16px;-webkit-overflow-scrolling:touch}
+
+/* フォーム */
+.fg{margin-bottom:14px}
+.fl{display:block;font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
+.selwrap{position:relative}
+.fsel{
+  width:100%;background:var(--s2);border:1px solid var(--bd);
+  color:var(--t1);padding:10px 40px 10px 12px;border-radius:var(--r);
+  font-family:inherit;font-size:13px;outline:none;
+  appearance:none;-webkit-appearance:none;transition:border-color .2s;cursor:pointer;
+}
+.fsel:focus{border-color:var(--ac)}
+.sarr{position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--t3);font-size:10px}
+.cpreview{height:4px;border-radius:0 0 var(--r) var(--r);transition:background .3s;margin-top:-4px}
+
+/* ステータス */
+.stath{display:flex;align-items:center;gap:8px;font-size:9px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin:16px 0 10px}
+.stath::after{content:'';flex:1;height:1px;background:var(--bd)}
+.srow{background:var(--s2);border:1px solid var(--bd2);border-radius:var(--r);padding:10px 12px;margin-bottom:8px;transition:border-color .2s}
+.srow:focus-within{border-color:var(--bd)}
+.stop{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.skey{font-size:11px;color:var(--t2);letter-spacing:.5px}
+.snum{
+  width:72px;background:var(--s3);border:1px solid var(--bd);
+  color:var(--t1);padding:5px 8px;border-radius:6px;
+  font-family:inherit;font-size:12px;text-align:right;outline:none;
+  transition:border-color .2s;
+}
+.snum:focus{border-color:var(--ac)}
+.sslide{
+  width:100%;-webkit-appearance:none;height:4px;
+  border-radius:2px;outline:none;cursor:pointer;
+}
+.sslide::-webkit-slider-thumb{
+  -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+  background:#fff;border:2px solid var(--ac);
+  box-shadow:0 0 6px rgba(59,130,246,.4);cursor:pointer;
+}
+.sslide::-moz-range-thumb{
+  width:16px;height:16px;border-radius:50%;
+  background:#fff;border:2px solid var(--ac);cursor:pointer;
+}
+.strk{height:4px;border-radius:2px;margin-top:6px;background:linear-gradient(90deg,#ef4444,#f59e0b 50%,#10b981);position:relative}
+.sind{
+  position:absolute;top:-3px;width:10px;height:10px;
+  border-radius:50%;border:2px solid #fff;
+  box-shadow:0 0 6px rgba(0,0,0,.5);transform:translateX(-50%);
+  transition:left .15s;
+}
+
+/* ─── フッター・ボタン ─────────────────────────────── */
+.mfoot{
+  padding:12px 16px;border-top:1px solid var(--bd);
+  display:flex;gap:8px;background:var(--s1);
+  padding-bottom:max(12px,env(safe-area-inset-bottom,12px));
+}
+.btn{flex:1;padding:13px 10px;border:none;border-radius:var(--r);font-family:inherit;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all .2s}
+.btn-c{background:var(--s2);color:var(--t2);border:1px solid var(--bd)}
+.btn-c:active{background:var(--s3)}
+.btn-s{background:linear-gradient(135deg,var(--ac),#1d4ed8);color:#fff;box-shadow:0 4px 16px rgba(59,130,246,.35)}
+.btn-s:active{transform:scale(.98);box-shadow:0 2px 8px rgba(59,130,246,.2)}
+.btn-s:disabled{opacity:.45;cursor:not-allowed;transform:none}
+
+/* ─── ローディング / トースト ────────────────────── */
+.lov{
+  display:none;position:fixed;inset:0;background:rgba(3,6,12,.85);
+  z-index:900;flex-direction:column;align-items:center;
+  justify-content:center;gap:14px;
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+}
+.lov.on{display:flex}
+.spin{
+  width:44px;height:44px;border:3px solid var(--bd);
+  border-top-color:var(--ac);border-radius:50%;
+  animation:spin .7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ltxt{color:var(--t2);font-size:11px;letter-spacing:2px}
+.toast{
+  position:fixed;bottom:24px;left:50%;
+  transform:translateX(-50%) translateY(20px);
+  background:var(--s2);color:var(--t1);
+  padding:10px 20px;border-radius:20px;border:1px solid var(--bd);
+  font-size:12px;letter-spacing:.5px;z-index:1000;
+  opacity:0;transition:all .3s cubic-bezier(.22,1,.36,1);
+  pointer-events:none;white-space:nowrap;max-width:90vw;
+  overflow:hidden;text-overflow:ellipsis;
+}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.ok{border-color:var(--ag);color:var(--ag)}
+.toast.er{border-color:var(--ar);color:var(--ar)}
 </style>
 </head>
 <body>
 
-<!-- ローディングオーバーレイ -->
-<div class="loading-overlay visible" id="loading-overlay">
-  <div class="spinner"></div>
-  <div class="loading-text">LOADING DATA...</div>
+<!-- ===== ローディング ===== -->
+<div class="lov on" id="LOV">
+  <div class="spin"></div>
+  <div class="ltxt" id="LOV_TXT">LOADING...</div>
 </div>
 
-<!-- トースト通知 -->
-<div class="toast" id="toast"></div>
+<!-- ===== トースト ===== -->
+<div class="toast" id="TOAST"></div>
 
-<!-- ============================================================
-     ヘッダー
-============================================================ -->
-<div class="header">
-  <div class="header-left">
-    <div class="header-icon">🗺</div>
+<!-- ===== GAS URL設定バナー ===== -->
+<div id="CONFIG_BANNER" style="display:none">
+  <span>⚠ GAS URL:</span>
+  <input type="text" id="URL_INPUT" placeholder="https://script.google.com/macros/s/xxxxxxx/exec を貼り付けて保存">
+  <button onclick="saveUrl()">保存して読込</button>
+</div>
+
+<!-- ===== ヘッダー ===== -->
+<div class="hdr">
+  <div class="hdr-l">
+    <div class="hdr-ico">🗺</div>
     <div>
-      <div class="header h1">地図管理</div>
-      <div class="header-sub">MAP CONTROL SYSTEM</div>
+      <h1 class="hdr">地図管理</h1>
+      <div class="hdr-sub">MAP CONTROL SYSTEM</div>
     </div>
   </div>
-  <div class="status-badge" id="status-badge">
-    <div class="status-dot loading" id="status-dot"></div>
-    <span id="status-text">読込中</span>
+  <div class="sbadge">
+    <div class="sdot ld" id="SDOT"></div>
+    <span id="STXT">読込中</span>
   </div>
 </div>
 
-<!-- ============================================================
-     SVGマップエリア
-============================================================ -->
-<div class="map-section">
-  <div class="map-label">TERRITORY MAP</div>
+<!-- ===== マップ ===== -->
+<div class="map-wrap">
+  <div class="map-lbl">TERRITORY MAP</div>
   <div class="map-scroll">
-    <div id="svg-container">
-<svg id="wrapper" viewBox="0 0 1400.16 600" preserveAspectRatio="xMinYMin" height="600" width="1400.16" style="background-color: rgb(255, 255, 255);"><metadata>
+    <div id="svg-wrap">
+     <svg id="wrapper" viewBox="0 0 1400.16 600" preserveAspectRatio="xMinYMin" height="600" width="1400.16" style="background-color: rgb(255, 255, 255);"><metadata>
     <rdf:rdf xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:cc="http://creativecommons.org/ns#" xmlns:dc="http://purl.org/dc/elements/1.1/">
       <cc:work rdf:about="">
         <dc:format>image/svg+xml</dc:format>
@@ -833,630 +347,408 @@ body {
   </div>
 </div>
 
-<!-- ============================================================
-     マップカラーモード切替
-============================================================ -->
-<div class="mode-tabs">
-  <button class="mode-tab active" onclick="setMapMode('country')" id="tab-country">🏴 国家別</button>
-  <button class="mode-tab" onclick="setMapMode('stat')" id="tab-stat">📊 ステータス別</button>
+<!-- ===== モードタブ ===== -->
+<div class="tabs">
+  <button class="tab on" id="TAB_C" onclick="setMode('country')">🏴 国家別</button>
+  <button class="tab"    id="TAB_S" onclick="setMode('stat')">📊 ステータス別</button>
+</div>
+<div class="chips" id="CHIPS"></div>
+
+<!-- ===== ステート一覧 ===== -->
+<div class="cnt">
+  <div class="sec-hd">STATE LIST</div>
+  <div class="srch">
+    <span style="color:var(--t3)">⌕</span>
+    <input type="text" id="SEARCH" placeholder="ステート名・国名で検索…"
+      oninput="filterCards()" autocomplete="off" autocorrect="off">
+  </div>
+  <div class="grid" id="GRID"></div>
+  <div class="empty" id="EMPTY" style="display:none">─ 一致するステートなし ─</div>
 </div>
 
-<!-- ステータス選択チップ（ステータスモード時のみ表示） -->
-<div class="stat-select-bar" id="stat-select-bar">
-  <!-- JSで生成 -->
-</div>
-
-<!-- ============================================================
-     ステート一覧
-============================================================ -->
-<div class="content">
-  <div class="section-head">STATE LIST</div>
-
-  <div class="search-wrap">
-    <span class="search-icon">⌕</span>
-    <input type="text" id="search-input"
-      placeholder="ステート名・国名で検索..."
-      oninput="filterStates()"
-      autocomplete="off"
-      autocorrect="off"
-    >
-  </div>
-
-  <div class="state-grid" id="state-grid">
-    <!-- JSで生成 -->
-  </div>
-  <div class="empty-state" id="empty-state" style="display:none;">
-    ─ 一致するステートなし ─
-  </div>
-</div>
-
-<!-- ============================================================
-     編集モーダル
-============================================================ -->
-<div class="modal-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
-  <div class="modal" id="modal">
-    <div class="modal-handle-bar"><div class="modal-handle"></div></div>
-
-    <div class="modal-header">
-      <div class="modal-state-color-bar" id="modal-color-bar"></div>
-      <div class="modal-titles">
-        <div class="modal-tag">TERRITORY EDIT</div>
-        <div class="modal-state-name" id="modal-state-name">—</div>
-        <div class="modal-state-country-label" id="modal-state-country-label"></div>
+<!-- ===== 編集モーダル ===== -->
+<div class="mover" id="MOVER" onclick="handleOvClick(event)">
+  <div class="modal">
+    <div class="mhandle"><div class="mbar"></div></div>
+    <div class="mhdr">
+      <div class="mcolorbar" id="M_CBAR"></div>
+      <div class="mtitles">
+        <div class="mtag">TERRITORY EDIT</div>
+        <div class="mname" id="M_NAME">—</div>
+        <div class="msub"  id="M_SUB"></div>
       </div>
-      <button class="modal-close" onclick="closeModal()">✕</button>
+      <button class="mclose" onclick="closeModal()">✕</button>
     </div>
-
-    <div class="modal-body" id="modal-body">
-
-      <!-- 国家選択 -->
-      <div class="form-group">
-        <label class="form-label">所属国家</label>
-        <div class="select-wrapper">
-          <select class="form-select" id="country-select" onchange="onCountryChange()">
+    <div class="mbody" id="M_BODY">
+      <div class="fg">
+        <label class="fl">所属国家</label>
+        <div class="selwrap">
+          <select class="fsel" id="M_CSEL" onchange="onCntChange()">
             <option value="">── 未所属 ──</option>
-            <!-- JSで生成 -->
           </select>
-          <span class="select-arrow">▼</span>
+          <span class="sarr">▼</span>
         </div>
-        <div class="country-preview-strip" id="country-preview-strip"></div>
+        <div class="cpreview" id="M_CPREV"></div>
       </div>
-
-      <!-- ステータス -->
-      <div id="stats-container">
-        <!-- JSで生成 -->
-      </div>
-
-    </div><!-- /modal-body -->
-
-    <div class="modal-footer">
-      <button class="btn btn-cancel" onclick="closeModal()">CANCEL</button>
-      <button class="btn btn-save" id="btn-save" onclick="saveState()">💾 SAVE</button>
+      <div id="M_STATS"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn btn-c" onclick="closeModal()">CANCEL</button>
+      <button class="btn btn-s" id="M_SAVE" onclick="doSave()">💾 SAVE</button>
     </div>
   </div>
 </div>
 
-<!-- ============================================================
-     JavaScript
-============================================================ -->
 <script>
-// ============================================================
-// データストア
-// ============================================================
-var allStates   = [];
-var countries   = [];
-var statHeaders = [];
-var statMinMax  = {};
-var mapMode     = 'country';
-var currentStat = null;
-var currentState = null;
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbyUpxjvBf5rh_X6rD_96m3u3J-xR_y51Nt_wSvqFQKl36bV5F0GyILpTNjSCvwXgbMq/exec'; 
 
-// ============================================================
-// 初期化
-// ============================================================
-document.addEventListener('DOMContentLoaded', function () {
+// LS キー
+var LS_KEY = 'mapctrl_gas_url';
+
+// ─────── データストア ────────────────────────────────
+var ALL  = [], CNTS = [], HDRS = [], MMX = {};
+var MODE = 'country', CSTAT = null, CSTATE = null;
+
+// ─────── 起動 ────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', function(){
+  var stored = localStorage.getItem(LS_KEY);
+  if (stored) GAS_URL = stored;
+  if (!GAS_URL || GAS_URL.trim() === '') {
+    showBanner();
+    hideLoading();
+    return;
+  }
   loadData();
 });
 
-function loadData() {
-  setStatus('loading', '読込中');
-  google.script.run
-    .withSuccessHandler(onDataLoaded)
-    .withFailureHandler(function(err) {
-      hideLoading();
-      setStatus('error', 'ERROR');
-      showToast('読込エラー: ' + err, 'error');
-    })
-    .getMapData();
+// ─────── URLバナー ────────────────────────────────────
+function showBanner(){
+  document.getElementById('CONFIG_BANNER').style.display = 'flex';
+  var inp = document.getElementById('URL_INPUT');
+  inp.value = GAS_URL || '';
+  setStatus('er','URL未設定');
+}
+function saveUrl(){
+  var v = document.getElementById('URL_INPUT').value.trim();
+  if (!v){ toast('URLを入力してください','er'); return; }
+  GAS_URL = v;
+  localStorage.setItem(LS_KEY, v);
+  document.getElementById('CONFIG_BANNER').style.display = 'none';
+  loadData();
 }
 
-function onDataLoaded(data) {
+// ─────── データ取得 ───────────────────────────────────
+function loadData(){
+  setStatus('ld','読込中');
+  showLoading('LOADING DATA...');
+  fetch(GAS_URL + '?action=getData')
+    .then(function(r){ return r.json(); })
+    .then(function(d){ onLoaded(d); })
+    .catch(function(e){ hideLoading(); setStatus('er','ERROR'); toast('通信エラー: '+e,'er'); });
+}
+
+function onLoaded(d){
   hideLoading();
-  if (!data || !data.success) {
-    setStatus('error', 'ERROR');
-    showToast((data && data.error) ? data.error : '不明なエラー', 'error');
-    return;
-  }
-
-  allStates   = data.states   || [];
-  countries   = data.countries || [];
-  statHeaders = data.statHeaders || [];
-
-  calcStatMinMax();
-  buildStatChips();
-  buildCountryOptions();
-  buildStateGrid(allStates);
-  applyMapColors();
-  setupSVGClicks();
-
-  setStatus('ok', allStates.length + ' STATES');
-  showToast('データ読込完了', 'success');
+  if(!d||!d.success){ setStatus('er','ERROR'); toast(d?d.error:'不明なエラー','er'); return; }
+  ALL  = d.states   || [];
+  CNTS = d.countries|| [];
+  HDRS = d.statHeaders || [];
+  calcMMX();
+  buildChips();
+  buildCntOptions();
+  buildCards(ALL);
+  applyColors();
+  setupSVG();
+  setStatus('ok', ALL.length+' STATES');
+  toast('データ読込完了','ok');
 }
 
-// ============================================================
-// ステータス最小最大計算
-// ============================================================
-function calcStatMinMax() {
-  statMinMax = {};
-  statHeaders.forEach(function(h) {
-    var min = Infinity, max = -Infinity;
-    allStates.forEach(function(s) {
-      var v = Number(s.stats[h]) || 0;
-      if (v < min) min = v;
-      if (v > max) max = v;
-    });
-    statMinMax[h] = { min: min === Infinity ? 0 : min, max: max === -Infinity ? 0 : max };
+// ─────── min/max計算 ─────────────────────────────────
+function calcMMX(){
+  MMX = {};
+  HDRS.forEach(function(h){
+    var mn=Infinity,mx=-Infinity;
+    ALL.forEach(function(s){ var v=num(s.stats[h]); if(v<mn)mn=v; if(v>mx)mx=v; });
+    MMX[h]={min:mn===Infinity?0:mn, max:mx===-Infinity?0:mx};
   });
 }
 
-// 値からヒートカラー（赤→緑）
-function getHeatColor(value, header) {
-  var mm = statMinMax[header];
-  if (!mm || mm.min === mm.max) return '#556677';
-  var ratio = Math.max(0, Math.min(1, (value - mm.min) / (mm.max - mm.min)));
-  var hue = Math.round(ratio * 120); // 0=赤, 120=緑
-  var sat = 75;
-  var lig = 38 + ratio * 12; // 38%〜50%
-  return 'hsl(' + hue + ', ' + sat + '%, ' + lig + '%)';
+// ─────── ヒートカラー ─────────────────────────────────
+function heatColor(val,hdr){
+  var mm=MMX[hdr]; if(!mm||mm.min===mm.max) return '#334455';
+  var r=clamp01((val-mm.min)/(mm.max-mm.min));
+  return 'hsl('+Math.round(r*120)+',75%,'+(38+r*12)+'%)';
 }
+function heatRatio(r){ return 'hsl('+Math.round(clamp01(r)*120)+',75%,44%)'; }
+function clamp01(v){ return Math.max(0,Math.min(1,v)); }
+function num(v){ return (v===''||v==null)?0:(Number(v)||0); }
 
-// 比率（0〜1）からヒートカラー（スライダー用）
-function getHeatColorRatio(ratio) {
-  var hue = Math.round(Math.max(0,Math.min(1,ratio)) * 120);
-  return 'hsl(' + hue + ', 75%, 44%)';
-}
-
-// ============================================================
-// SVGにカラーを適用
-// ============================================================
-function applyMapColors() {
-  var allPaths = document.querySelectorAll('#svg-container path');
-  allPaths.forEach(function(el) {
-    var name = getPathName(el);
-    if (!name) return;
-    var state = findState(name);
-    if (!state) return;
-
-    var color;
-    if (mapMode === 'country') {
-      var c = findCountry(state.country);
-      color = c ? c.color : '#253347';
+// ─────── SVG カラー適用 ───────────────────────────────
+function applyColors(){
+  document.querySelectorAll('#svg-wrap path').forEach(function(el){
+    var n=pname(el); if(!n) return;
+    var s=fState(n); if(!s) return;
+    var col;
+    if(MODE==='country'){
+      var c=fCnt(s.country); col=c?c.color:'#1e2d45';
     } else {
-      color = currentStat
-        ? getHeatColor(state.stats[currentStat] || 0, currentStat)
-        : '#253347';
+      col=CSTAT?heatColor(num(s.stats[CSTAT]),CSTAT):'#1e2d45';
     }
-    el.setAttribute('fill', color);
-    el.style.fill = color;
+    el.setAttribute('fill',col);
   });
 }
 
-// SVG pathから名前を取得
-function getPathName(el) {
-  // 1: title子要素
-  var titleEl = el.querySelector('title');
-  if (titleEl && titleEl.textContent && titleEl.textContent.trim()) {
-    return titleEl.textContent.trim();
-  }
-  // 2: data-name属性
-  var dn = el.getAttribute('data-name');
-  if (dn && dn.trim()) return dn.trim();
-  // 3: id属性（mapやwrapper等は除外）
-  var id = el.id;
-  if (id && id !== 'map' && id !== 'wrapper' && id !== 'map-group') return id;
-  // 4: 親のtitle
-  var parent = el.parentElement;
-  if (parent) {
-    var pt = parent.querySelector(':scope > title');
-    if (pt && pt.textContent) return pt.textContent.trim();
-    if (parent.id && parent.id !== 'map' && parent.id !== 'wrapper' && parent.id !== 'map-group') {
-      return parent.id;
-    }
+// pathから名前を取る
+function pname(el){
+  var t=el.querySelector('title'); if(t&&t.textContent.trim()) return t.textContent.trim();
+  var dn=el.getAttribute('data-name'); if(dn&&dn.trim()) return dn.trim();
+  var id=el.id; if(id&&!/^(map|wrapper|map-group)$/.test(id)) return id;
+  var p=el.parentElement;
+  if(p){
+    var pt=p.querySelector(':scope > title'); if(pt&&pt.textContent) return pt.textContent.trim();
+    if(p.id&&!/^(map|wrapper|map-group)$/.test(p.id)) return p.id;
   }
   return null;
 }
 
-// SVGクリックイベント設定
-function setupSVGClicks() {
-  var allPaths = document.querySelectorAll('#svg-container path');
-  allPaths.forEach(function(el) {
-    el.style.cursor = 'pointer';
-    el.addEventListener('click', function(e) {
+// SVGクリック設定
+function setupSVG(){
+  document.querySelectorAll('#svg-wrap path').forEach(function(el){
+    el.style.cursor='pointer';
+    el.addEventListener('click',function(e){
       e.stopPropagation();
-      var name = getPathName(el);
-      if (!name) return;
-      var state = findState(name);
-      if (!state) {
-        showToast('"' + name + '" はリストにありません', 'error');
-        return;
-      }
-      highlightPath(el);
-      openModal(state);
+      var n=pname(el); if(!n) return;
+      var s=fState(n);
+      if(!s){ toast('"'+n+'" はリストにありません','er'); return; }
+      hlPath(el);
+      openModal(s);
     });
   });
 }
 
-// パス強調表示
-var _highlightedEl = null;
-var _highlightedOriginalStroke = '';
-var _highlightedOriginalSW = '';
-
-function highlightPath(el) {
-  clearHighlight();
-  _highlightedEl = el;
-  _highlightedOriginalStroke = el.getAttribute('stroke') || '';
-  _highlightedOriginalSW = el.getAttribute('stroke-width') || '';
-  el.setAttribute('stroke', '#ffffff');
-  el.setAttribute('stroke-width', '2');
-  _highlightedEl = el;
+var _hlEl=null,_hlStroke='',_hlSW='';
+function hlPath(el){
+  clearHL();
+  _hlEl=el; _hlStroke=el.getAttribute('stroke')||''; _hlSW=el.getAttribute('stroke-width')||'';
+  el.setAttribute('stroke','#fff'); el.setAttribute('stroke-width','2');
 }
-
-function clearHighlight() {
-  if (_highlightedEl) {
-    _highlightedEl.setAttribute('stroke', _highlightedOriginalStroke);
-    _highlightedEl.setAttribute('stroke-width', _highlightedOriginalSW);
-    _highlightedEl = null;
-  }
+function clearHL(){
+  if(_hlEl){ _hlEl.setAttribute('stroke',_hlStroke); _hlEl.setAttribute('stroke-width',_hlSW); _hlEl=null; }
 }
-
-// マップ上のステートを名前で強調
-function highlightByName(name) {
-  clearHighlight();
-  var allPaths = document.querySelectorAll('#svg-container path');
-  for (var i = 0; i < allPaths.length; i++) {
-    var n = getPathName(allPaths[i]);
-    if (n && normName(n) === normName(name)) {
-      highlightPath(allPaths[i]);
-      break;
-    }
-  }
-}
-
-// ============================================================
-// マップモード
-// ============================================================
-function setMapMode(mode) {
-  mapMode = mode;
-  document.getElementById('tab-country').classList.toggle('active', mode === 'country');
-  document.getElementById('tab-stat').classList.toggle('active', mode === 'stat');
-  var bar = document.getElementById('stat-select-bar');
-  bar.classList.toggle('visible', mode === 'stat');
-
-  if (mode === 'stat' && !currentStat && statHeaders.length > 0) {
-    currentStat = statHeaders[0];
-    updateChipActive();
-  }
-  applyMapColors();
-}
-
-function buildStatChips() {
-  var bar = document.getElementById('stat-select-bar');
-  bar.innerHTML = '';
-  if (statHeaders.length === 0) return;
-  currentStat = statHeaders[0];
-  statHeaders.forEach(function(h) {
-    var btn = document.createElement('button');
-    btn.className = 'stat-chip' + (h === currentStat ? ' active' : '');
-    btn.textContent = h;
-    btn.dataset.stat = h;
-    btn.onclick = function() {
-      currentStat = h;
-      updateChipActive();
-      applyMapColors();
-    };
-    bar.appendChild(btn);
+function hlByName(n){
+  clearHL();
+  document.querySelectorAll('#svg-wrap path').forEach(function(el){
+    if(norm(pname(el))===norm(n)){ hlPath(el); }
   });
 }
 
-function updateChipActive() {
-  document.querySelectorAll('.stat-chip').forEach(function(c) {
-    c.classList.toggle('active', c.dataset.stat === currentStat);
+// ─────── マップモード ─────────────────────────────────
+function setMode(m){
+  MODE=m;
+  document.getElementById('TAB_C').classList.toggle('on',m==='country');
+  document.getElementById('TAB_S').classList.toggle('on',m==='stat');
+  document.getElementById('CHIPS').classList.toggle('on',m==='stat');
+  if(m==='stat'&&!CSTAT&&HDRS.length){ CSTAT=HDRS[0]; updChips(); }
+  applyColors();
+}
+
+function buildChips(){
+  var bar=document.getElementById('CHIPS'); bar.innerHTML='';
+  if(!HDRS.length) return;
+  CSTAT=HDRS[0];
+  HDRS.forEach(function(h){
+    var b=document.createElement('button');
+    b.className='chip'+(h===CSTAT?' on':'');
+    b.textContent=h; b.dataset.h=h;
+    b.onclick=function(){ CSTAT=h; updChips(); applyColors(); };
+    bar.appendChild(b);
+  });
+}
+function updChips(){
+  document.querySelectorAll('.chip').forEach(function(c){ c.classList.toggle('on',c.dataset.h===CSTAT); });
+}
+
+// ─────── カードグリッド ───────────────────────────────
+function buildCntOptions(){
+  var sel=document.getElementById('M_CSEL');
+  sel.innerHTML='<option value="">── 未所属 ──</option>';
+  CNTS.forEach(function(c){
+    var o=document.createElement('option');
+    o.value=c.name; o.textContent=c.name; sel.appendChild(o);
   });
 }
 
-// ============================================================
-// ステートグリッド
-// ============================================================
-function buildCountryOptions() {
-  var sel = document.getElementById('country-select');
-  sel.innerHTML = '<option value="">── 未所属 ──</option>';
-  countries.forEach(function(c) {
-    var opt = document.createElement('option');
-    opt.value = c.name;
-    opt.textContent = c.name;
-    sel.appendChild(opt);
+function buildCards(list){
+  var g=document.getElementById('GRID'),e=document.getElementById('EMPTY');
+  g.innerHTML='';
+  if(!list.length){ e.style.display='block'; return; }
+  e.style.display='none';
+  list.forEach(function(s){
+    var c=fCnt(s.country),col=c?c.color:'#1e2d45';
+    var d=document.createElement('div');
+    d.className='card';
+    d.innerHTML='<div class="swatch" style="background:'+esc(col)+'"></div>'+
+      '<div class="cinfo">'+
+        '<div class="cname">'+esc(s.name)+'</div>'+
+        '<div class="ccountry">'+esc(s.country||'未所属')+'</div>'+
+      '</div><div class="carr">›</div>';
+    d.onclick=function(){ hlByName(s.name); openModal(s); };
+    g.appendChild(d);
   });
 }
 
-function buildStateGrid(list) {
-  var grid = document.getElementById('state-grid');
-  var empty = document.getElementById('empty-state');
-  grid.innerHTML = '';
-  if (list.length === 0) { empty.style.display = 'block'; return; }
-  empty.style.display = 'none';
-
-  list.forEach(function(state) {
-    var c = findCountry(state.country);
-    var color = c ? c.color : '#253347';
-
-    var card = document.createElement('div');
-    card.className = 'state-card';
-    card.innerHTML =
-      '<div class="state-swatch" style="background:' + esc(color) + ';"></div>' +
-      '<div class="state-info">' +
-        '<div class="state-name">' + esc(state.name) + '</div>' +
-        '<div class="state-country">' + esc(state.country || '未所属') + '</div>' +
-      '</div>' +
-      '<div class="state-arrow">›</div>';
-
-    card.onclick = function() {
-      highlightByName(state.name);
-      openModal(state);
-    };
-    grid.appendChild(card);
-  });
+function filterCards(){
+  var q=norm(document.getElementById('SEARCH').value);
+  buildCards(ALL.filter(function(s){ return norm(s.name).includes(q)||norm(s.country||'').includes(q); }));
 }
 
-function filterStates() {
-  var q = normName(document.getElementById('search-input').value);
-  var list = allStates.filter(function(s) {
-    return normName(s.name).includes(q) || normName(s.country || '').includes(q);
-  });
-  buildStateGrid(list);
+// ─────── モーダル ─────────────────────────────────────
+function openModal(s){
+  CSTATE=s;
+  var c=fCnt(s.country),col=c?c.color:'#1e2d45';
+  document.getElementById('M_NAME').textContent=s.name;
+  document.getElementById('M_SUB').textContent=s.country||'未所属';
+  document.getElementById('M_CBAR').style.background=col;
+  document.getElementById('M_CSEL').value=s.country||'';
+  updCPreview();
+  buildStats(s);
+  document.getElementById('MOVER').classList.add('on');
+}
+function closeModal(){ document.getElementById('MOVER').classList.remove('on'); clearHL(); CSTATE=null; }
+function handleOvClick(e){ if(e.target===document.getElementById('MOVER')) closeModal(); }
+
+function onCntChange(){
+  updCPreview();
+  var v=document.getElementById('M_CSEL').value;
+  var c=fCnt(v);
+  document.getElementById('M_CBAR').style.background=c?c.color:'#1e2d45';
+  document.getElementById('M_SUB').textContent=v||'未所属';
+}
+function updCPreview(){
+  var c=fCnt(document.getElementById('M_CSEL').value);
+  document.getElementById('M_CPREV').style.background=c?c.color:'transparent';
 }
 
-// ============================================================
-// モーダル
-// ============================================================
-function openModal(state) {
-  currentState = state;
-  var c = findCountry(state.country);
-  var color = c ? c.color : '#253347';
-
-  document.getElementById('modal-state-name').textContent = state.name;
-  document.getElementById('modal-state-country-label').textContent = state.country || '未所属';
-  document.getElementById('modal-color-bar').style.background = color;
-  document.getElementById('modal-overlay').classList.add('open');
-
-  // 国家選択
-  var sel = document.getElementById('country-select');
-  sel.value = state.country || '';
-  updateCountryPreview();
-
-  // ステータス
-  buildStatsUI(state);
-}
-
-function closeModal() {
-  document.getElementById('modal-overlay').classList.remove('open');
-  clearHighlight();
-  currentState = null;
-}
-
-function handleOverlayClick(e) {
-  if (e.target === document.getElementById('modal-overlay')) closeModal();
-}
-
-function onCountryChange() {
-  updateCountryPreview();
-  // モーダルのカラーバーも更新
-  var sel = document.getElementById('country-select');
-  var c = findCountry(sel.value);
-  document.getElementById('modal-color-bar').style.background = c ? c.color : '#253347';
-  document.getElementById('modal-state-country-label').textContent = sel.value || '未所属';
-}
-
-function updateCountryPreview() {
-  var sel = document.getElementById('country-select');
-  var c = findCountry(sel.value);
-  document.getElementById('country-preview-strip').style.background = c ? c.color : 'transparent';
-}
-
-// ============================================================
-// ステータスUI
-// ============================================================
-function buildStatsUI(state) {
-  var container = document.getElementById('stats-container');
-  container.innerHTML = '';
-  if (statHeaders.length === 0) {
-    container.innerHTML = '<div style="color:var(--text3);font-size:11px;letter-spacing:1px;">ステータス列がありません</div>';
+// ─────── ステータスUI ─────────────────────────────────
+function buildStats(s){
+  var ct=document.getElementById('M_STATS'); ct.innerHTML='';
+  if(!HDRS.length){
+    ct.innerHTML='<div style="color:var(--t3);font-size:11px;letter-spacing:1px">ステータス列がありません</div>';
     return;
   }
+  var th=document.createElement('div');
+  th.className='stath'; th.textContent='STATISTICS'; ct.appendChild(th);
 
-  var title = document.createElement('div');
-  title.className = 'stat-section-title';
-  title.textContent = 'STATISTICS';
-  container.appendChild(title);
+  HDRS.forEach(function(h,i){
+    var val=num(s.stats[h]);
+    var mm=MMX[h]||{min:0,max:100};
+    var smin=mm.min, smax=mm.max===mm.min?mm.max+100:mm.max;
+    var ratio=clamp01((val-smin)/(smax-smin));
+    var pct=Math.round(ratio*100);
+    var step=(smax-smin>10000)?10:(smax-smin>1000)?1:(smax-smin>100)?.5:.1;
 
-  statHeaders.forEach(function(header, idx) {
-    var val = Number(state.stats[header]) || 0;
-    var mm = statMinMax[header] || { min: 0, max: 100 };
-    var sliderMin = mm.min;
-    var sliderMax = mm.max === mm.min ? mm.max + 100 : mm.max;
-    var ratio = (sliderMax !== sliderMin)
-      ? Math.max(0, Math.min(1, (val - sliderMin) / (sliderMax - sliderMin)))
-      : 0.5;
-    var pct = Math.round(ratio * 100);
-    var indicatorColor = getHeatColorRatio(ratio);
-    var trackBg = buildSliderGradient(ratio);
-
-    var row = document.createElement('div');
-    row.className = 'stat-row';
-    row.innerHTML =
-      '<div class="stat-top">' +
-        '<span class="stat-key">' + esc(header) + '</span>' +
-        '<input type="number" class="stat-num-input" id="snum_' + idx + '"' +
-          ' value="' + val + '" step="0.1"' +
-          ' onchange="onNumChange(' + idx + ',\'' + escJs(header) + '\')"' +
-          ' oninput="onNumChange(' + idx + ',\'' + escJs(header) + '\')">' +
-      '</div>' +
-      '<input type="range" class="stat-slider" id="sslide_' + idx + '"' +
-        ' min="' + sliderMin + '" max="' + sliderMax + '"' +
-        ' step="' + calcStep(sliderMin, sliderMax) + '"' +
-        ' value="' + val + '"' +
-        ' style="background:' + trackBg + '"' +
-        ' oninput="onSlideChange(' + idx + ',\'' + escJs(header) + '\')">' +
-      '<div class="stat-color-track">' +
-        '<div class="stat-color-indicator" id="sind_' + idx + '"' +
-          ' style="left:' + pct + '%; background:' + indicatorColor + ';"></div>' +
-      '</div>';
-    container.appendChild(row);
+    var r=document.createElement('div'); r.className='srow';
+    r.innerHTML=
+      '<div class="stop">'+
+        '<span class="skey">'+esc(h)+'</span>'+
+        '<input type="number" class="snum" id="sn_'+i+'" value="'+val+'" step="'+step+'"'+
+          ' oninput="onNum('+i+',\''+escj(h)+'\')">'+
+      '</div>'+
+      '<input type="range" class="sslide" id="ss_'+i+'"'+
+        ' min="'+smin+'" max="'+smax+'" step="'+step+'" value="'+val+'"'+
+        ' style="background:'+slGrad(ratio)+'"'+
+        ' oninput="onSlide('+i+',\''+escj(h)+'\')">'+
+      '<div class="strk"><div class="sind" id="si_'+i+'" style="left:'+pct+'%;background:'+heatRatio(ratio)+'"></div></div>';
+    ct.appendChild(r);
   });
 }
 
-function calcStep(min, max) {
-  var range = max - min;
-  if (range > 10000) return 10;
-  if (range > 1000)  return 1;
-  if (range > 100)   return 0.5;
-  return 0.1;
+function slGrad(r){
+  var p=Math.round(r*100),c=heatRatio(r);
+  return 'linear-gradient(90deg,'+c+' 0%,'+c+' '+p+'%,var(--s3) '+p+'%,var(--s3) 100%)';
 }
 
-function buildSliderGradient(ratio) {
-  var pct = Math.round(ratio * 100);
-  var fillColor = getHeatColorRatio(ratio);
-  return 'linear-gradient(90deg, ' + fillColor + ' 0%, ' + fillColor + ' ' + pct + '%, var(--surface3) ' + pct + '%, var(--surface3) 100%)';
+function onSlide(i,h){
+  var sl=document.getElementById('ss_'+i),ni=document.getElementById('sn_'+i);
+  var v=parseFloat(sl.value); ni.value=v;
+  updInd(i,h,v,parseFloat(sl.min),parseFloat(sl.max));
+}
+function onNum(i,h){
+  var ni=document.getElementById('sn_'+i),sl=document.getElementById('ss_'+i);
+  var v=parseFloat(ni.value)||0;
+  if(sl){ if(v<parseFloat(sl.min))sl.min=v; if(v>parseFloat(sl.max))sl.max=v; sl.value=v; }
+  updInd(i,h,v,parseFloat(sl.min),parseFloat(sl.max));
+}
+function updInd(i,h,v,mn,mx){
+  var sl=document.getElementById('ss_'+i),ind=document.getElementById('si_'+i);
+  if(!sl||!ind) return;
+  var r=clamp01((v-mn)/(mx-mn||1)),pct=Math.round(r*100);
+  ind.style.left=pct+'%'; ind.style.background=heatRatio(r);
+  sl.style.background=slGrad(r);
 }
 
-function onSlideChange(idx, header) {
-  var slider = document.getElementById('sslide_' + idx);
-  var numInput = document.getElementById('snum_' + idx);
-  var val = parseFloat(slider.value);
-  numInput.value = val;
-  updateStatIndicator(idx, header, val);
-}
-
-function onNumChange(idx, header) {
-  var numInput = document.getElementById('snum_' + idx);
-  var slider = document.getElementById('sslide_' + idx);
-  var val = parseFloat(numInput.value) || 0;
-  if (slider) {
-    if (val < parseFloat(slider.min)) slider.min = val;
-    if (val > parseFloat(slider.max)) slider.max = val;
-    slider.value = val;
-  }
-  updateStatIndicator(idx, header, val);
-}
-
-function updateStatIndicator(idx, header, val) {
-  var slider = document.getElementById('sslide_' + idx);
-  var ind = document.getElementById('sind_' + idx);
-  if (!slider || !ind) return;
-
-  var min = parseFloat(slider.min);
-  var max = parseFloat(slider.max);
-  var ratio = (max !== min) ? Math.max(0, Math.min(1, (val - min) / (max - min))) : 0.5;
-  var pct = Math.round(ratio * 100);
-  var color = getHeatColorRatio(ratio);
-
-  ind.style.left = pct + '%';
-  ind.style.background = color;
-  slider.style.background = buildSliderGradient(ratio);
-}
-
-// ============================================================
-// 保存
-// ============================================================
-function saveState() {
-  if (!currentState) return;
-
-  var stateName = currentState.name;
-  var countryName = document.getElementById('country-select').value;
-
-  // ステータスを収集
-  var stats = {};
-  statHeaders.forEach(function(header, idx) {
-    var input = document.getElementById('snum_' + idx);
-    stats[header] = input ? (parseFloat(input.value) || 0) : 0;
+// ─────── 保存 ─────────────────────────────────────────
+function doSave(){
+  if(!CSTATE) return;
+  var sname  =CSTATE.name;
+  var cname  =document.getElementById('M_CSEL').value;
+  var stats  ={};
+  HDRS.forEach(function(h,i){
+    var el=document.getElementById('sn_'+i);
+    stats[h]=el?parseFloat(el.value)||0:0;
   });
 
-  var saveBtn = document.getElementById('btn-save');
-  saveBtn.disabled = true;
-  saveBtn.textContent = 'SAVING...';
-  showLoading();
+  var btn=document.getElementById('M_SAVE');
+  btn.disabled=true; btn.textContent='SAVING...';
+  showLoading('SAVING...');
 
-  google.script.run
-    .withSuccessHandler(function(result) {
-      hideLoading();
-      saveBtn.disabled = false;
-      saveBtn.textContent = '💾 SAVE';
+  var url=GAS_URL+'?action=save'+
+    '&stateName='+encodeURIComponent(sname)+
+    '&countryName='+encodeURIComponent(cname)+
+    '&stats='+encodeURIComponent(JSON.stringify(stats));
 
-      if (result && result.success) {
-        // ローカルデータ更新
-        var s = findState(stateName);
-        if (s) {
-          s.country = countryName;
-          Object.assign(s.stats, stats);
-        }
-        calcStatMinMax();
-        applyMapColors();
-        buildStateGrid(allStates);
-        closeModal();
-        showToast('✓ 保存しました', 'success');
+  fetch(url)
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      hideLoading(); btn.disabled=false; btn.textContent='💾 SAVE';
+      if(d&&d.success){
+        var s=fState(sname);
+        if(s){ s.country=cname; Object.assign(s.stats,stats); }
+        calcMMX(); applyColors(); buildCards(ALL);
+        closeModal(); toast('✓ 保存しました','ok');
       } else {
-        showToast('保存エラー: ' + (result ? result.error : '不明'), 'error');
+        toast('保存エラー: '+(d?d.error:'不明'),'er');
       }
     })
-    .withFailureHandler(function(err) {
-      hideLoading();
-      saveBtn.disabled = false;
-      saveBtn.textContent = '💾 SAVE';
-      showToast('通信エラー: ' + err, 'error');
-    })
-    .saveStateData(stateName, countryName, stats);
+    .catch(function(e){
+      hideLoading(); btn.disabled=false; btn.textContent='💾 SAVE';
+      toast('通信エラー: '+e,'er');
+    });
 }
 
-// ============================================================
-// ユーティリティ
-// ============================================================
-function findState(name) {
-  var n = normName(name);
-  return allStates.find(function(s) { return normName(s.name) === n; }) || null;
+// ─────── ユーティリティ ───────────────────────────────
+function fState(n){ var nn=norm(n); return ALL.find(function(s){ return norm(s.name)===nn; })||null; }
+function fCnt(n){ if(!n) return null; var nn=norm(n); return CNTS.find(function(c){ return norm(c.name)===nn; })||null; }
+function norm(s){ return String(s||'').trim().toLowerCase(); }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escj(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"'); }
+
+function setStatus(t,txt){
+  var d=document.getElementById('SDOT');
+  d.className='sdot'+(t==='ld'?' ld':t==='er'?' er':'');
+  document.getElementById('STXT').textContent=txt;
 }
-
-function findCountry(name) {
-  if (!name) return null;
-  var n = normName(name);
-  return countries.find(function(c) { return normName(c.name) === n; }) || null;
+function showLoading(t){
+  document.getElementById('LOV_TXT').textContent=t||'LOADING...';
+  document.getElementById('LOV').classList.add('on');
 }
+function hideLoading(){ document.getElementById('LOV').classList.remove('on'); }
 
-function normName(s) { return String(s || '').trim().toLowerCase(); }
-
-function esc(s) {
-  return String(s)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-function escJs(s) {
-  return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"');
-}
-
-// ステータス表示
-function setStatus(type, text) {
-  var dot = document.getElementById('status-dot');
-  var label = document.getElementById('status-text');
-  dot.className = 'status-dot ' + (type === 'ok' ? '' : type);
-  label.textContent = text;
-}
-
-function showLoading() {
-  document.getElementById('loading-overlay').classList.add('visible');
-}
-
-function hideLoading() {
-  document.getElementById('loading-overlay').classList.remove('visible');
-}
-
-var _toastTimer;
-function showToast(msg, type) {
-  var el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = 'toast visible ' + (type || '');
-  clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(function() {
-    el.className = 'toast';
-  }, 3000);
+var _tt;
+function toast(msg,type){
+  var el=document.getElementById('TOAST');
+  el.textContent=msg; el.className='toast on '+(type||'');
+  clearTimeout(_tt); _tt=setTimeout(function(){ el.className='toast'; },3000);
 }
 </script>
 </body>
