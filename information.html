@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>情報 | 国家運営ポータル</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* ── リセット & 変数 ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--s1:#0d1220;--s2:#121a2c;--s3:#192236;--s4:#1e2a3a;
+  --bd:#1e2d45;--bd2:#152035;
+  --t1:#c8d8f0;--t2:#607898;--t3:#2e4260;
+  --ac:#3b82f6;--ag:#10b981;--ar:#ef4444;--ay:#f59e0b;
+  --uc:#3b82f6;--uc2:#1d4ed8;
+  --r:10px;--rl:14px;
+}
+html,body{min-height:100%;background:var(--bg);color:var(--t1);
+  font-family:'Hiragino Kaku Gothic ProN','Noto Sans JP','Courier New',monospace;
+  font-size:14px;overflow-x:hidden;
+}
+
+/* ── ローディング / トースト ── */
+#LOV{display:none;position:fixed;inset:0;background:rgba(3,6,12,.9);z-index:2000;
+  flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  backdrop-filter:blur(4px);}
+#LOV.on{display:flex}
+.spin{width:40px;height:40px;border:3px solid var(--bd);border-top-color:var(--uc);
+  border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ltxt{color:var(--t2);font-size:11px;letter-spacing:2px}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:rgba(13,18,32,.96);color:var(--t1);padding:10px 20px;border-radius:22px;
+  border:1px solid var(--bd);font-size:13px;z-index:3000;opacity:0;
+  transition:all .3s cubic-bezier(.22,1,.36,1);pointer-events:none;
+  white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis;}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.er{border-color:var(--ar);color:var(--ar)}
+
+/* ── ヘッダー ── */
+.hdr{
+  position:sticky;top:0;z-index:300;
+  background:rgba(7,9,15,.88);border-bottom:1px solid rgba(255,255,255,.06);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  height:52px;display:flex;align-items:center;gap:10px;padding:0 14px;
+  box-shadow:0 2px 16px rgba(0,0,0,.5);
+}
+.hdr-back{
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+  color:var(--t1);border-radius:8px;padding:7px 13px;
+  font-family:inherit;font-size:12px;cursor:pointer;
+  letter-spacing:.5px;transition:background .2s;white-space:nowrap;
+}
+.hdr-back:active{background:rgba(255,255,255,.12)}
+.hdr-flag{width:7px;height:30px;border-radius:3px;background:var(--uc);
+  box-shadow:0 0 10px var(--uc);flex-shrink:0;transition:background .5s,box-shadow .5s;}
+.hdr-texts{flex:1;min-width:0}
+.hdr-label{font-size:9px;color:var(--t3);letter-spacing:2px;text-transform:uppercase}
+.hdr-name{font-size:16px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ── セクション共通 ── */
+.page{padding:12px 12px 60px}
+.section{margin-bottom:20px}
+.sec-head{
+  display:flex;align-items:center;gap:8px;
+  font-size:9px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;
+  margin-bottom:10px;padding:0 2px;
+}
+.sec-head::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--bd),transparent)}
+.sec-title-text{white-space:nowrap}
+
+/* ── 景気ゲージ ── */
+.econ-card{
+  background:var(--s1);border:1px solid var(--bd);border-radius:var(--rl);
+  padding:16px;
+}
+.econ-value-row{display:flex;align-items:baseline;gap:8px;margin-bottom:12px}
+.econ-num{font-size:38px;font-weight:900;letter-spacing:-1px;line-height:1}
+.econ-label{font-size:11px;color:var(--t2);letter-spacing:1px}
+.econ-range-row{display:flex;justify-content:space-between;font-size:10px;margin-bottom:4px}
+.econ-range-min{color:#ef4444}.econ-range-max{color:#10b981}
+.econ-bar-track{
+  height:14px;border-radius:7px;position:relative;
+  background:linear-gradient(90deg,#ef4444 0%,#1f2937 50%,#10b981 100%);
+  border:1px solid rgba(255,255,255,.06);overflow:visible;
+}
+.econ-indicator{
+  position:absolute;top:50%;transform:translate(-50%,-50%);
+  width:20px;height:20px;border-radius:50%;
+  border:3px solid #fff;box-shadow:0 0 10px rgba(0,0,0,.6);
+  transition:left .5s cubic-bezier(.22,1,.36,1);
+}
+.econ-ticks{display:flex;justify-content:space-between;margin-top:5px;font-size:10px;color:var(--t3)}
+
+/* ── テキスト情報カード ── */
+.info-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.info-card{
+  background:var(--s1);border:1px solid var(--bd2);border-radius:var(--r);
+  padding:11px 12px;
+}
+.info-card-label{font-size:9px;color:var(--t3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px}
+.info-card-value{font-size:14px;font-weight:700;color:var(--t1);word-break:break-all;line-height:1.4}
+
+/* ── トグルボタン（国/要素の表示切替） ── */
+.toggle-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;padding:0 2px}
+.tog-btn{
+  padding:5px 12px;border-radius:20px;font-family:inherit;font-size:11px;
+  cursor:pointer;letter-spacing:.3px;transition:all .2s;border:1px solid transparent;
+  white-space:nowrap;
+}
+.tog-btn.active{opacity:1}
+.tog-btn.inactive{opacity:.3;background:var(--s3)!important;border-color:var(--bd)!important;color:var(--t3)!important}
+
+/* ── チャートラッパー ── */
+.chart-card{
+  background:var(--s1);border:1px solid var(--bd);border-radius:var(--rl);
+  padding:14px 10px 10px;overflow:hidden;
+}
+.chart-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;scrollbar-color:var(--bd) transparent;padding-bottom:4px;}
+.chart-scroll::-webkit-scrollbar{height:3px}
+.chart-scroll::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px}
+.chart-inner{position:relative;height:220px;min-width:100%}
+.chart-inner.tall{height:260px}
+.chart-inner.wide40{min-width:600px}
+.chart-inner.widemulti{min-width:480px}
+
+/* ── CSV テーブル ── */
+.csv-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;
+  border-radius:var(--rl);border:1px solid var(--bd);}
+.csv-scroll::-webkit-scrollbar{height:4px}
+.csv-scroll::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px}
+.csv-table{border-collapse:collapse;width:100%;min-width:600px;font-size:11px}
+.csv-table th{
+  background:var(--s2);color:var(--t2);font-weight:700;
+  padding:8px 10px;text-align:left;border-bottom:1px solid var(--bd);
+  white-space:nowrap;letter-spacing:.5px;position:sticky;top:0;
+}
+.csv-table td{
+  padding:8px 10px;border-bottom:1px solid var(--bd2);
+  color:var(--t1);white-space:nowrap;
+}
+.csv-table tr:last-child td{border-bottom:none}
+.csv-table tr:hover td{background:rgba(30,45,69,.25)}
+.csv-name-cell{font-weight:700;display:flex;align-items:center;gap:7px}
+.csv-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* ── ログイン誘導 ── */
+#NO_SESSION{
+  display:none;position:fixed;inset:0;z-index:1500;
+  background:var(--bg);flex-direction:column;align-items:center;justify-content:center;
+  gap:14px;padding:24px;text-align:center;
+}
+#NO_SESSION.on{display:flex}
+.no-sess-title{font-size:18px;font-weight:700;color:var(--t1)}
+.no-sess-sub{font-size:13px;color:var(--t2);line-height:1.7}
+.no-sess-btn{
+  background:linear-gradient(135deg,var(--uc),var(--uc2));
+  border:none;border-radius:var(--r);color:#fff;
+  padding:13px 32px;font-family:inherit;font-size:14px;font-weight:700;
+  cursor:pointer;letter-spacing:1px;
+}
+
+/* ── GAS URL バナー ── */
+#CONFIG_BANNER{
+  display:none;background:rgba(245,158,11,.1);border-bottom:1px solid rgba(245,158,11,.3);
+  padding:10px 14px;align-items:center;gap:8px;font-size:11px;color:var(--ay);
+}
+#CONFIG_BANNER.on{display:flex}
+#CONFIG_BANNER input{flex:1;background:rgba(0,0,0,.4);border:1px solid rgba(245,158,11,.3);
+  color:#fde68a;font-family:inherit;font-size:11px;padding:6px 10px;border-radius:6px;outline:none;min-width:0}
+#CONFIG_BANNER button{background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.4);
+  color:var(--ay);font-family:inherit;font-size:10px;padding:6px 10px;
+  border-radius:6px;cursor:pointer;white-space:nowrap;flex-shrink:0}
+</style>
+</head>
+<body>
+
+<div id="LOV" class="on"><div class="spin"></div><div class="ltxt" id="LOV_TXT">読込中...</div></div>
+<div class="toast" id="TOAST"></div>
+
+<!-- ログイン誘導 -->
+<div id="NO_SESSION">
+  <div class="no-sess-title">ログインが必要です</div>
+  <div class="no-sess-sub">このページを見るには<br>ホームページからログインしてください</div>
+  <button class="no-sess-btn" onclick="location.href='home.html'">ホームへ戻る</button>
+</div>
+
+<!-- GAS URL バナー -->
+<div id="CONFIG_BANNER">
+  <span style="flex-shrink:0">GAS URL</span>
+  <input type="text" id="URL_INPUT" placeholder="https://script.google.com/macros/s/.../exec">
+  <button onclick="saveUrl()">保存して読込</button>
+</div>
+
+<!-- ヘッダー -->
+<div class="hdr">
+  <button class="hdr-back" onclick="history.back()">← 戻る</button>
+  <div class="hdr-flag" id="H_FLAG"></div>
+  <div class="hdr-texts">
+    <div class="hdr-label">情報</div>
+    <div class="hdr-name" id="H_NAME">--</div>
+  </div>
+</div>
+
+<!-- メインコンテンツ -->
+<div class="page" id="PAGE" style="display:none">
+
+  <!-- ── 景気 ── -->
+  <div class="section" id="SEC_ECON">
+    <div class="sec-head"><span class="sec-title-text">ECONOMY</span></div>
+    <div class="econ-card" id="ECON_CARD">
+      <div class="econ-value-row">
+        <div class="econ-num" id="ECON_NUM">--</div>
+        <div class="econ-label">/ 100</div>
+        <div style="margin-left:auto;font-size:11px;color:var(--t3)" id="ECON_STATUS">--</div>
+      </div>
+      <div class="econ-range-row"><span>-100 (不況)</span><span>0 (標準)</span><span>+100 (好景気)</span></div>
+      <div class="econ-bar-track" id="ECON_TRACK">
+        <div class="econ-indicator" id="ECON_IND"></div>
+      </div>
+      <div class="econ-ticks"><span>-100</span><span>-50</span><span>0</span><span>+50</span><span>+100</span></div>
+    </div>
+  </div>
+
+  <!-- ── D-K テキスト情報 ── -->
+  <div class="section" id="SEC_DK">
+    <div class="sec-head"><span class="sec-title-text" id="DK_TITLE">基本情報 (D-K)</span></div>
+    <div class="info-grid" id="DK_GRID"></div>
+  </div>
+
+  <!-- ── 比較グラフ (D,E,F,G,K) ── -->
+  <div class="section" id="SEC_COMP">
+    <div class="sec-head"><span class="sec-title-text">国家比較グラフ (D・E・F・G・K)</span></div>
+    <div class="toggle-row" id="COMP_TOGGLES"></div>
+    <div class="chart-card">
+      <div class="chart-scroll">
+        <div class="chart-inner tall widemulti">
+          <canvas id="CHART_COMP"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── M-R テキスト情報 ── -->
+  <div class="section" id="SEC_MR">
+    <div class="sec-head"><span class="sec-title-text" id="MR_TITLE">詳細情報 (M-R)</span></div>
+    <div class="info-grid" id="MR_GRID"></div>
+  </div>
+
+  <!-- ── 40日間推移 (T列) ── -->
+  <div class="section" id="SEC_T">
+    <div class="sec-head"><span class="sec-title-text" id="T_TITLE">40日間推移</span></div>
+    <div class="chart-card">
+      <div class="chart-scroll">
+        <div class="chart-inner wide40">
+          <canvas id="CHART_T"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 多国間 5日変動グラフ × 7 ── -->
+  <div class="section" id="SEC_VZ">
+    <div class="sec-head"><span class="sec-title-text" id="VZ_TITLE">5日間変動 (V-Z)</span></div>
+    <div class="toggle-row" id="VZ_TOGGLES"></div>
+    <div class="chart-card">
+      <div class="chart-scroll"><div class="chart-inner widemulti"><canvas id="CHART_VZ"></canvas></div></div>
+    </div>
+  </div>
+
+  <div class="section" id="SEC_AB">
+    <div class="sec-head"><span class="sec-title-text" id="AB_TITLE">5日間変動 (AB-AF)</span></div>
+    <div class="toggle-row" id="AB_TOGGLES"></div>
+    <div class="chart-card">
+      <div class="chart-scroll"><div class="chart-inner widemulti"><canvas id="CHART_AB"></canvas></div></div>
+    </div>
+  </div>
+
+  <div class="section" id="SEC_AH">
+    <div class="sec-head"><span class="sec-title-text" id="AH_TITLE">5日間変動 (AH-AL)</span></div>
+    <div class="toggle-row" id="AH_TOGGLES"></div>
+    <div class="chart-card">
+      <div class="chart-scroll"><div class="chart-inner widemulti"><canvas id="CHART_AH"></canvas></div></div>
+    </div>
+  </div>
+
+  <div class="section" id="SEC_AN">
+    <div class="sec-head"><span class="sec-title-text" id="AN_TITLE">5日間変動 (AN-AR)</span></div>
+    <div class="toggle-row" id="AN_TOGGLES"></div>
+    <div class="chart-card">
+      <div class="chart-scroll"><div class="chart-inner widemulti"><canvas id="CHART_AN"></canvas></div></div>
+    </div>
+  </div>
+
+  <div class="section" id="SEC_AT">
+    <div class="sec-head"><span class="sec-title-text" id="AT_TITLE">5日間変動 (AT-AX)</span></div>
+    <div class="toggle-row" id="AT_TOGGLES"></div>
+    <div class="chart-card">
+      <div class="chart-scroll"><div class="chart-inner widemulti"><canvas id="CHART_AT"></canvas></div></div>
+    </div>
+  </div>
+
+  <div class="section" id="SEC_AZ">
+    <div class="sec-head"><span class="sec-title-text" id="AZ_TITLE">5日間変動 (AZ-BD)</span></div>
+    <div class="toggle-row" id="AZ_TOGGLES"></div>
+    <div class="chart-card">
+      <div class="chart-scroll"><div class="chart-inner widemulti"><canvas id="CHART_AZ"></canvas></div></div>
+    </div>
+  </div>
+
+  <div class="section" id="SEC_BF">
+    <div class="sec-head"><span class="sec-title-text" id="BF_TITLE">5日間変動 (BF-BJ)</span></div>
+    <div class="toggle-row" id="BF_TOGGLES"></div>
+    <div class="chart-card">
+      <div class="chart-scroll"><div class="chart-inner widemulti"><canvas id="CHART_BF"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- ── CSVデータ (A-K) ── -->
+  <div class="section" id="SEC_CSV">
+    <div class="sec-head"><span class="sec-title-text">全国家データ一覧 (A-K)</span></div>
+    <div class="csv-scroll">
+      <table class="csv-table" id="CSV_TABLE"></table>
+    </div>
+  </div>
+
+</div><!-- /page -->
+
+<script>
+var GAS_URL  = 'https://script.google.com/macros/s/AKfycbzm1r0rYrsh1unyGrNn3Y_cftTtS-zE1Thm8nLPOhQAfXMepDGe3-0FfTh9CdcQnagkGA/exec'; 
+
+
+var LS_URL   = 'info_gas_url';
+var LS_SES   = 'home_session'; // home.htmlと共通
+
+var SESSION  = null;
+var DATA     = null;
+var CHARTS   = {}; // チャートインスタンス保持
+
+// Chart.js グローバル設定（ダークモード）
+Chart.defaults.color         = '#607898';
+Chart.defaults.borderColor   = '#1e2d45';
+Chart.defaults.font.family   = "'Hiragino Kaku Gothic ProN','Courier New',monospace";
+Chart.defaults.font.size     = 11;
+
+// ════════════════════════════════════════════════════
+//  起動
+// ════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', function(){
+  var sv = localStorage.getItem(LS_URL);
+  if(sv) GAS_URL = sv;
+
+  // セッション確認
+  try{
+    var s = sessionStorage.getItem(LS_SES);
+    if(s) SESSION = JSON.parse(s);
+  }catch(e){}
+
+  if(!SESSION){
+    hideLoading();
+    document.getElementById('NO_SESSION').classList.add('on');
+    return;
+  }
+
+  // ヘッダー設定
+  document.getElementById('H_NAME').textContent = SESSION.country;
+  document.getElementById('H_FLAG').style.background = SESSION.color||'#3b82f6';
+  document.getElementById('H_FLAG').style.boxShadow  = '0 0 10px '+(SESSION.color||'#3b82f6');
+  document.documentElement.style.setProperty('--uc',  SESSION.color||'#3b82f6');
+  document.documentElement.style.setProperty('--uc2', darken(SESSION.color||'#3b82f6',.25));
+
+  if(!GAS_URL){
+    document.getElementById('CONFIG_BANNER').classList.add('on');
+    hideLoading();
+    return;
+  }
+  loadData();
+});
+
+function saveUrl(){
+  var v=document.getElementById('URL_INPUT').value.trim();
+  if(!v){toast('URLを入力してください','er');return;}
+  GAS_URL=v; localStorage.setItem(LS_URL,v);
+  document.getElementById('CONFIG_BANNER').classList.remove('on');
+  loadData();
+}
+
+// ════════════════════════════════════════════════════
+//  データ取得
+// ════════════════════════════════════════════════════
+function loadData(){
+  showLoading('データ取得中...');
+  fetch(GAS_URL+'?action=getInfoData&country='+encodeURIComponent(SESSION.country))
+    .then(function(r){return r.json();})
+    .then(function(d){
+      hideLoading();
+      if(!d||!d.success){ toast((d?d.error:'取得失敗'),'er'); return; }
+      DATA = d;
+      renderAll();
+    })
+    .catch(function(e){ hideLoading(); toast('通信エラー: '+e,'er'); });
+}
+
+// ════════════════════════════════════════════════════
+//  全セクションレンダリング
+// ════════════════════════════════════════════════════
+function renderAll(){
+  document.getElementById('PAGE').style.display='block';
+
+  var me  = DATA.myCountry;
+  var all = DATA.allCountries;
+  var lbl = DATA.labels;
+
+  // ─ 1. 景気ゲージ ─────────────────────────────────
+  if(me){
+    renderEconomy(me.economy, me.color);
+  }
+
+  // ─ 2. D-K テキスト ───────────────────────────────
+  if(me){
+    renderTextGrid('DK_GRID', lbl.dk, me.dk);
+    var dkTitle = lbl.dk.filter(function(h){return h;}).slice(0,2).join(' / ');
+    document.getElementById('DK_TITLE').textContent = '基本情報' + (dkTitle ? ' — '+dkTitle : '');
+  }
+
+  // ─ 3. 比較グラフ (D,E,F,G,K) ─────────────────────
+  buildGroupedChart(
+    'CHART_COMP', 'COMP_TOGGLES',
+    all, 'comp', lbl.comp,
+    '国家比較 (D・E・F・G・K)'
+  );
+
+  // ─ 4. M-R テキスト ───────────────────────────────
+  if(me){
+    renderTextGrid('MR_GRID', lbl.mr, me.mr);
+  }
+
+  // ─ 5. 40日間推移 (T列) ───────────────────────────
+  renderTimeSeriesChart(DATA.timeSeries, lbl.t, me ? me.color : '#3b82f6');
+
+  // ─ 6-12. 多国間 5日変動チャート ───────────────────
+  var multiDefs = [
+    { id:'CHART_VZ', tog:'VZ_TOGGLES', key:'vz',  lbls:lbl.vz,  titId:'VZ_TITLE', titTxt:'5日間変動 (V-Z)' },
+    { id:'CHART_AB', tog:'AB_TOGGLES', key:'ab',  lbls:lbl.ab,  titId:'AB_TITLE', titTxt:'5日間変動 (AB-AF)' },
+    { id:'CHART_AH', tog:'AH_TOGGLES', key:'ah',  lbls:lbl.ah,  titId:'AH_TITLE', titTxt:'5日間変動 (AH-AL)' },
+    { id:'CHART_AN', tog:'AN_TOGGLES', key:'an',  lbls:lbl.an,  titId:'AN_TITLE', titTxt:'5日間変動 (AN-AR)' },
+    { id:'CHART_AT', tog:'AT_TOGGLES', key:'at_', lbls:lbl.at_, titId:'AT_TITLE', titTxt:'5日間変動 (AT-AX)' },
+    { id:'CHART_AZ', tog:'AZ_TOGGLES', key:'az',  lbls:lbl.az,  titId:'AZ_TITLE', titTxt:'5日間変動 (AZ-BD)' },
+    { id:'CHART_BF', tog:'BF_TOGGLES', key:'bf',  lbls:lbl.bf,  titId:'BF_TITLE', titTxt:'5日間変動 (BF-BJ)' }
+  ];
+  multiDefs.forEach(function(def){
+    document.getElementById(def.titId).textContent = def.titTxt;
+    buildGroupedChart(def.id, def.tog, all, def.key, def.lbls, def.titTxt);
+  });
+
+  // ─ 13. CSV テーブル ──────────────────────────────
+  renderCSV(DATA.csv, all);
+}
+
+// ════════════════════════════════════════════════════
+//  景気ゲージ
+// ════════════════════════════════════════════════════
+function renderEconomy(val, color){
+  var pct = (val + 100) / 200 * 100; // 0-100%
+  var col = econColor(val);
+
+  document.getElementById('ECON_NUM').textContent = val > 0 ? '+'+val : val;
+  document.getElementById('ECON_NUM').style.color = col;
+
+  var status = val >= 70 ? '好景気' : val >= 20 ? 'やや好調' :
+               val >= -20 ? '標準' : val >= -70 ? 'やや不況' : '不況';
+  document.getElementById('ECON_STATUS').textContent = status;
+  document.getElementById('ECON_STATUS').style.color = col;
+
+  var ind = document.getElementById('ECON_IND');
+  ind.style.left = clamp(pct,0,100)+'%';
+  ind.style.background = col;
+  ind.style.boxShadow = '0 0 10px '+col;
+}
+
+function econColor(val){
+  val = clamp(val, -100, 100);
+  if(val < 0){
+    var t = (val + 100) / 100; // 0(red) → 1(white)
+    return lerpColor('#ef4444','#9ca3af', t);
+  } else {
+    var t2 = val / 100; // 0(white) → 1(green)
+    return lerpColor('#9ca3af','#10b981', t2);
+  }
+}
+
+function lerpColor(a, b, t){
+  var ar=parseInt(a.slice(1,3),16), ag=parseInt(a.slice(3,5),16), ab=parseInt(a.slice(5,7),16);
+  var br=parseInt(b.slice(1,3),16), bg=parseInt(b.slice(3,5),16), bb=parseInt(b.slice(5,7),16);
+  var r=Math.round(ar+(br-ar)*t), g=Math.round(ag+(bg-ag)*t), bv=Math.round(ab+(bb-ab)*t);
+  return '#'+(r<16?'0':'')+r.toString(16)+(g<16?'0':'')+g.toString(16)+(bv<16?'0':'')+bv.toString(16);
+}
+
+// ════════════════════════════════════════════════════
+//  テキストグリッド
+// ════════════════════════════════════════════════════
+function renderTextGrid(elId, labels, values){
+  var g = document.getElementById(elId);
+  g.innerHTML='';
+  for(var i=0;i<labels.length;i++){
+    if(!labels[i] && !values[i]) continue;
+    var card = document.createElement('div');
+    card.className='info-card';
+    card.innerHTML =
+      '<div class="info-card-label">'+esc(labels[i]||('列'+(i+1)))+'</div>'+
+      '<div class="info-card-value">'+esc(values[i]||'--')+'</div>';
+    g.appendChild(card);
+  }
+}
+
+// ════════════════════════════════════════════════════
+//  40日間推移チャート（T列）
+// ════════════════════════════════════════════════════
+function renderTimeSeriesChart(series, headerLabel, color){
+  var labels = [];
+  for(var i=series.length;i>=1;i--){
+    labels.push(i===1?'今日':(i-1)+'日前');
+  }
+  // series はすでに古い順（左=古い, 右=新しい）
+  var displayLabels = [];
+  for(var j=series.length;j>=1;j--){
+    displayLabels.push(j===1?'今日':(j-1)+'日前');
+  }
+
+  // もう一度: seriesは既に[oldest, ..., newest]の順 → そのままX軸に使う
+  var xLabels = [];
+  for(var k=0;k<series.length;k++){
+    var daysAgo = series.length - 1 - k;
+    xLabels.push(daysAgo===0?'今日':daysAgo+'日前');
+  }
+
+  var ctx = document.getElementById('CHART_T').getContext('2d');
+  if(CHARTS['T']) CHARTS['T'].destroy();
+
+  CHARTS['T'] = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels: xLabels,
+      datasets:[{
+        label: headerLabel || '40日間推移',
+        data:  series,
+        backgroundColor: hexAlpha(color, .65),
+        borderColor:     color,
+        borderWidth: 1,
+        borderRadius: 2
+      }]
+    },
+    options: chartOpts({
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          callbacks:{
+            label:function(ctx){ return ' '+ctx.parsed.y; }
+          }
+        }
+      },
+      scales:{
+        x:{
+          ticks:{maxRotation:60,minRotation:30,font:{size:9}},
+          grid:{color:'rgba(30,45,69,.5)'}
+        },
+        y:{grid:{color:'rgba(30,45,69,.5)'}}
+      }
+    })
+  });
+}
+
+// ════════════════════════════════════════════════════
+//  グループ化棒グラフ（多国間比較）
+// ════════════════════════════════════════════════════
+function buildGroupedChart(canvasId, toggleId, countries, dataKey, labels, chartTitle){
+  var ctx = document.getElementById(canvasId).getContext('2d');
+  if(CHARTS[canvasId]) CHARTS[canvasId].destroy();
+
+  // データセット（国ごと）
+  var datasets = countries.map(function(c){
+    var vals = c[dataKey];
+    return {
+      label: c.name,
+      data:  vals || Array(labels.length).fill(0),
+      backgroundColor: hexAlpha(c.color||'#3b82f6', .7),
+      borderColor:     c.color||'#3b82f6',
+      borderWidth: 1,
+      borderRadius: 2,
+      hidden: false
+    };
+  });
+
+  var chart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: labels, datasets: datasets },
+    options: chartOpts({
+      plugins:{
+        legend:{ display:false },
+        tooltip:{
+          mode:'index',
+          intersect:false,
+          callbacks:{
+            label:function(ctx){
+              return ' '+ctx.dataset.label+': '+ctx.parsed.y;
+            }
+          }
+        }
+      },
+      scales:{
+        x:{
+          ticks:{ font:{size:10} },
+          grid:{ color:'rgba(30,45,69,.5)' }
+        },
+        y:{ grid:{ color:'rgba(30,45,69,.5)' } }
+      }
+    })
+  });
+
+  CHARTS[canvasId] = chart;
+
+  // トグルボタンを生成
+  buildToggles(toggleId, countries, chart);
+}
+
+// ════════════════════════════════════════════════════
+//  トグルボタン生成
+// ════════════════════════════════════════════════════
+function buildToggles(containerId, countries, chart){
+  var cont = document.getElementById(containerId);
+  if(!cont) return;
+  cont.innerHTML='';
+
+  countries.forEach(function(c, idx){
+    var btn = document.createElement('button');
+    btn.className='tog-btn active';
+    btn.textContent = c.name;
+    btn.style.background    = hexAlpha(c.color||'#3b82f6', .2);
+    btn.style.borderColor   = c.color||'#3b82f6';
+    btn.style.color         = c.color||'#3b82f6';
+    btn.dataset.idx = idx;
+
+    btn.addEventListener('click', function(){
+      var ds  = chart.data.datasets[idx];
+      var on  = !ds.hidden;
+      ds.hidden = on;
+      btn.classList.toggle('inactive', on);
+      btn.classList.toggle('active', !on);
+      chart.update();
+    });
+    cont.appendChild(btn);
+  });
+}
+
+// ════════════════════════════════════════════════════
+//  CSV テーブル
+// ════════════════════════════════════════════════════
+function renderCSV(csvRows, allCountries){
+  var tbl = document.getElementById('CSV_TABLE');
+  tbl.innerHTML='';
+  if(!csvRows||!csvRows.length) return;
+
+  // ヘッダー行
+  var thead = document.createElement('thead');
+  var trh   = document.createElement('tr');
+  csvRows[0].forEach(function(h,i){
+    var th = document.createElement('th');
+    th.textContent = h||('Col'+(i+1));
+    trh.appendChild(th);
+  });
+  thead.appendChild(trh);
+  tbl.appendChild(thead);
+
+  // データ行
+  var tbody = document.createElement('tbody');
+  for(var i=1;i<csvRows.length;i++){
+    var row = csvRows[i];
+    var tr  = document.createElement('tr');
+    var cnt = allCountries[i-1];
+    var cc  = cnt ? cnt.color : '#3b82f6';
+
+    row.forEach(function(cell, ci){
+      var td = document.createElement('td');
+      if(ci===0){
+        // 国名セル：カラードット付き
+        td.innerHTML='<div class="csv-name-cell"><div class="csv-dot" style="background:'+esc(cc)+';box-shadow:0 0 6px '+esc(cc)+'"></div>'+esc(String(cell))+'</div>';
+      } else {
+        td.textContent = String(cell);
+      }
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  }
+  tbl.appendChild(tbody);
+}
+
+// ════════════════════════════════════════════════════
+//  Chart.js 共通オプション
+// ════════════════════════════════════════════════════
+function chartOpts(extra){
+  var base = {
+    responsive:true,
+    maintainAspectRatio:false,
+    interaction:{ mode:'index', intersect:false },
+    animation:{ duration:400 },
+    plugins:{
+      legend:{ display:false },
+      tooltip:{
+        backgroundColor:'rgba(13,18,32,.95)',
+        borderColor:'#1e2d45',
+        borderWidth:1,
+        titleColor:'#c8d8f0',
+        bodyColor:'#607898',
+        padding:10,
+        cornerRadius:8
+      }
+    },
+    scales:{
+      x:{
+        ticks:{color:'#607898',font:{size:10}},
+        grid:{color:'rgba(30,45,69,.5)'}
+      },
+      y:{
+        ticks:{color:'#607898',font:{size:10}},
+        grid:{color:'rgba(30,45,69,.5)'}
+      }
+    }
+  };
+  // deepMerge extra into base
+  return deepMerge(base, extra||{});
+}
+
+// ════════════════════════════════════════════════════
+//  ユーティリティ
+// ════════════════════════════════════════════════════
+function hexAlpha(hex, a){
+  hex=(hex||'#3b82f6').replace('#','');
+  if(hex.length===3) hex=hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+  var r=parseInt(hex.substr(0,2),16);
+  var g=parseInt(hex.substr(2,2),16);
+  var b=parseInt(hex.substr(4,2),16);
+  return 'rgba('+r+','+g+','+b+','+a+')';
+}
+
+function darken(hex, a){
+  hex=(hex||'#3b82f6').replace('#','');
+  if(hex.length===3) hex=hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+  var r=Math.max(0,Math.round(parseInt(hex.substr(0,2),16)*(1-a)));
+  var g=Math.max(0,Math.round(parseInt(hex.substr(2,2),16)*(1-a)));
+  var b=Math.max(0,Math.round(parseInt(hex.substr(4,2),16)*(1-a)));
+  return '#'+(r<16?'0':'')+r.toString(16)+(g<16?'0':'')+g.toString(16)+(b<16?'0':'')+b.toString(16);
+}
+
+function clamp(v,mn,mx){ return Math.max(mn,Math.min(mx,v)); }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function deepMerge(base, ext){
+  for(var k in ext){
+    if(!ext.hasOwnProperty(k)) continue;
+    if(ext[k]&&typeof ext[k]==='object'&&!Array.isArray(ext[k])&&base[k]&&typeof base[k]==='object'){
+      deepMerge(base[k], ext[k]);
+    } else {
+      base[k]=ext[k];
+    }
+  }
+  return base;
+}
+
+function showLoading(t){ document.getElementById('LOV_TXT').textContent=t||'読込中...'; document.getElementById('LOV').classList.add('on'); }
+function hideLoading(){ document.getElementById('LOV').classList.remove('on'); }
+
+var _tt;
+function toast(msg,type){
+  var el=document.getElementById('TOAST');
+  el.textContent=msg; el.className='toast on '+(type||'');
+  clearTimeout(_tt); _tt=setTimeout(function(){ el.className='toast'; },3500);
+}
+</script>
+</body>
+</html>
