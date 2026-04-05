@@ -326,11 +326,12 @@ html,body{min-height:100%;background:var(--bg);color:var(--t1);
     </div>
   </div>
 
-</div>
+</div><!-- /page -->
 
 <script>
 
-var GAS_URL  = 'https://script.google.com/macros/s/AKfycbzm1r0rYrsh1unyGrNn3Y_cftTtS-zE1Thm8nLPOhQAfXMepDGe3-0FfTh9CdcQnagkGA/exec'; 
+var GAS_URL  = 'https://script.google.com/macros/s/AKfycbzm1r0rYrsh1unyGrNn3Y_cftTtS-zE1Thm8nLPOhQAfXMepDGe3-0FfTh9CdcQnagkGA/exec';
+
 
 var LS_URL   = 'info_gas_url';
 var LS_SES   = 'home_session'; // home.htmlと共通
@@ -425,11 +426,10 @@ function renderAll(){
     document.getElementById('DK_TITLE').textContent = '基本情報' + (dkTitle ? ' — '+dkTitle : '');
   }
 
-  // ─ 3. 比較グラフ (D,E,F,G,K) → 積み上げ棒グラフ ──
-  buildGroupedChart(
+  // ─ 3. 比較グラフ → 国家ごとの積み上げ棒グラフ ────
+  buildCountryStackedChart(
     'CHART_COMP', 'COMP_TOGGLES',
-    all, 'comp', lbl.comp,
-    '国家比較 (D・E・F・G・K)', 'stacked'
+    all, 'comp', lbl.comp
   );
 
   // ─ 4. M-R テキスト ───────────────────────────────
@@ -564,6 +564,100 @@ function renderTimeSeriesChart(series, headerLabel, color){
         y:{grid:{color:'rgba(30,45,69,.5)'}}
       }
     })
+  });
+}
+
+// ════════════════════════════════════════════════════
+//  国家ごとの積み上げ棒グラフ（X軸=国家、積み上げ=指標）
+//  CHART_COMP 専用
+// ════════════════════════════════════════════════════
+function buildCountryStackedChart(canvasId, toggleId, countries, dataKey, metricLabels){
+  var ctx = document.getElementById(canvasId).getContext('2d');
+  if(CHARTS[canvasId]) CHARTS[canvasId].destroy();
+
+  // 指標ごとに1つのdataset（各国の値を並べる）
+  // 5指標 × 各国 の積み上げ棒グラフ
+  var METRIC_COLORS = [
+    '#3b82f6', // D - blue
+    '#10b981', // E - green
+    '#f59e0b', // F - amber
+    '#a855f7', // G - purple
+    '#ef4444'  // K - red
+  ];
+
+  // X軸: 国家名
+  var xLabels = countries.map(function(c){ return c.name; });
+
+  // datasets: 指標ごと（metricLabels の数 = 5）
+  var datasets = metricLabels.map(function(mLabel, mi){
+    var col = METRIC_COLORS[mi] || '#607898';
+    return {
+      label:           mLabel || ('指標'+(mi+1)),
+      data:            countries.map(function(c){ return (c[dataKey]||[])[mi] || 0; }),
+      backgroundColor: hexAlpha(col, .78),
+      borderColor:     col,
+      borderWidth:     1,
+      hidden:          false
+    };
+  });
+
+  var chart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: xLabels, datasets: datasets },
+    options: chartOpts({
+      plugins:{
+        legend:{ display:false },
+        tooltip:{
+          mode:'index',
+          intersect:false,
+          callbacks:{
+            label:function(ctx){
+              return ' '+ctx.dataset.label+': '+ctx.parsed.y;
+            },
+            footer:function(items){
+              var sum = items.reduce(function(a,b){ return a + b.parsed.y; }, 0);
+              return '合計: '+sum.toFixed(1);
+            }
+          }
+        }
+      },
+      scales:{
+        x:{
+          stacked: true,
+          ticks:{ font:{size:11} },
+          grid:{ color:'rgba(30,45,69,.5)' }
+        },
+        y:{
+          stacked: true,
+          grid:{ color:'rgba(30,45,69,.5)' }
+        }
+      }
+    })
+  });
+
+  CHARTS[canvasId] = chart;
+
+  // トグルボタン → 指標ごとに切り替え
+  var cont = document.getElementById(toggleId);
+  if(!cont) return;
+  cont.innerHTML='';
+  metricLabels.forEach(function(mLabel, mi){
+    var col = METRIC_COLORS[mi] || '#607898';
+    var btn = document.createElement('button');
+    btn.className = 'tog-btn active';
+    btn.textContent = mLabel || ('指標'+(mi+1));
+    btn.style.background  = hexAlpha(col, .2);
+    btn.style.borderColor = col;
+    btn.style.color       = col;
+    btn.addEventListener('click', function(){
+      var ds  = chart.data.datasets[mi];
+      var on  = !ds.hidden;
+      ds.hidden = on;
+      btn.classList.toggle('inactive', on);
+      btn.classList.toggle('active', !on);
+      chart.update();
+    });
+    cont.appendChild(btn);
   });
 }
 
