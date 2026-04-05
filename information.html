@@ -326,11 +326,11 @@ html,body{min-height:100%;background:var(--bg);color:var(--t1);
     </div>
   </div>
 
-</div><!-- /page -->
+</div>
 
 <script>
-var GAS_URL  = 'https://script.google.com/macros/s/AKfycbzm1r0rYrsh1unyGrNn3Y_cftTtS-zE1Thm8nLPOhQAfXMepDGe3-0FfTh9CdcQnagkGA/exec'; 
 
+var GAS_URL  = 'https://script.google.com/macros/s/AKfycbzm1r0rYrsh1unyGrNn3Y_cftTtS-zE1Thm8nLPOhQAfXMepDGe3-0FfTh9CdcQnagkGA/exec'; 
 
 var LS_URL   = 'info_gas_url';
 var LS_SES   = 'home_session'; // home.htmlと共通
@@ -425,11 +425,11 @@ function renderAll(){
     document.getElementById('DK_TITLE').textContent = '基本情報' + (dkTitle ? ' — '+dkTitle : '');
   }
 
-  // ─ 3. 比較グラフ (D,E,F,G,K) ─────────────────────
+  // ─ 3. 比較グラフ (D,E,F,G,K) → 積み上げ棒グラフ ──
   buildGroupedChart(
     'CHART_COMP', 'COMP_TOGGLES',
     all, 'comp', lbl.comp,
-    '国家比較 (D・E・F・G・K)'
+    '国家比較 (D・E・F・G・K)', 'stacked'
   );
 
   // ─ 4. M-R テキスト ───────────────────────────────
@@ -452,7 +452,7 @@ function renderAll(){
   ];
   multiDefs.forEach(function(def){
     document.getElementById(def.titId).textContent = def.titTxt;
-    buildGroupedChart(def.id, def.tog, all, def.key, def.lbls, def.titTxt);
+    buildGroupedChart(def.id, def.tog, all, def.key, def.lbls, def.titTxt, 'line');
   });
 
   // ─ 13. CSV テーブル ──────────────────────────────
@@ -516,20 +516,9 @@ function renderTextGrid(elId, labels, values){
 }
 
 // ════════════════════════════════════════════════════
-//  40日間推移チャート（T列）
+//  40日間推移チャート（T列）→ 折れ線
 // ════════════════════════════════════════════════════
 function renderTimeSeriesChart(series, headerLabel, color){
-  var labels = [];
-  for(var i=series.length;i>=1;i--){
-    labels.push(i===1?'今日':(i-1)+'日前');
-  }
-  // series はすでに古い順（左=古い, 右=新しい）
-  var displayLabels = [];
-  for(var j=series.length;j>=1;j--){
-    displayLabels.push(j===1?'今日':(j-1)+'日前');
-  }
-
-  // もう一度: seriesは既に[oldest, ..., newest]の順 → そのままX軸に使う
   var xLabels = [];
   for(var k=0;k<series.length;k++){
     var daysAgo = series.length - 1 - k;
@@ -540,16 +529,22 @@ function renderTimeSeriesChart(series, headerLabel, color){
   if(CHARTS['T']) CHARTS['T'].destroy();
 
   CHARTS['T'] = new Chart(ctx, {
-    type:'bar',
+    type:'line',
     data:{
       labels: xLabels,
       datasets:[{
         label: headerLabel || '40日間推移',
         data:  series,
-        backgroundColor: hexAlpha(color, .65),
         borderColor:     color,
-        borderWidth: 1,
-        borderRadius: 2
+        backgroundColor: hexAlpha(color, .15),
+        borderWidth: 2,
+        pointRadius: 3,
+        pointHoverRadius: 6,
+        pointBackgroundColor: color,
+        pointBorderColor: '#07090f',
+        pointBorderWidth: 1.5,
+        tension: 0.35,
+        fill: true
       }]
     },
     options: chartOpts({
@@ -573,35 +568,65 @@ function renderTimeSeriesChart(series, headerLabel, color){
 }
 
 // ════════════════════════════════════════════════════
-//  グループ化棒グラフ（多国間比較）
+//  多国間チャート（積み上げ棒 or 折れ線）
+//  chartType: 'stacked' | 'line' | undefined(grouped bar)
 // ════════════════════════════════════════════════════
-function buildGroupedChart(canvasId, toggleId, countries, dataKey, labels, chartTitle){
+function buildGroupedChart(canvasId, toggleId, countries, dataKey, labels, chartTitle, chartType){
   var ctx = document.getElementById(canvasId).getContext('2d');
   if(CHARTS[canvasId]) CHARTS[canvasId].destroy();
 
-  // データセット（国ごと）
+  var isLine    = chartType === 'line';
+  var isStacked = chartType === 'stacked';
+
   var datasets = countries.map(function(c){
     var vals = c[dataKey];
-    return {
-      label: c.name,
-      data:  vals || Array(labels.length).fill(0),
-      backgroundColor: hexAlpha(c.color||'#3b82f6', .7),
-      borderColor:     c.color||'#3b82f6',
-      borderWidth: 1,
-      borderRadius: 2,
-      hidden: false
+    var col  = c.color || '#3b82f6';
+    var ds = {
+      label:    c.name,
+      data:     vals || Array(labels.length).fill(0),
+      borderColor: col,
+      hidden:   false
     };
+    if(isLine){
+      ds.backgroundColor  = hexAlpha(col, .12);
+      ds.borderWidth      = 2;
+      ds.pointRadius      = 4;
+      ds.pointHoverRadius = 7;
+      ds.pointBackgroundColor = col;
+      ds.pointBorderColor     = '#07090f';
+      ds.pointBorderWidth     = 1.5;
+      ds.tension          = 0.35;
+      ds.fill             = false;
+    } else {
+      // 棒グラフ（通常 or 積み上げ）
+      ds.backgroundColor = hexAlpha(col, .72);
+      ds.borderWidth     = 1;
+      ds.borderRadius    = isStacked ? 0 : 3;
+    }
+    return ds;
   });
 
+  var scaleOpts = {
+    x:{
+      ticks:{ font:{size:10} },
+      grid:{ color:'rgba(30,45,69,.5)' },
+      stacked: isStacked
+    },
+    y:{
+      grid:{ color:'rgba(30,45,69,.5)' },
+      stacked: isStacked
+    }
+  };
+
   var chart = new Chart(ctx, {
-    type: 'bar',
+    type: isLine ? 'line' : 'bar',
     data: { labels: labels, datasets: datasets },
     options: chartOpts({
       plugins:{
         legend:{ display:false },
         tooltip:{
-          mode:'index',
-          intersect:false,
+          mode: isLine ? 'index' : 'index',
+          intersect: false,
           callbacks:{
             label:function(ctx){
               return ' '+ctx.dataset.label+': '+ctx.parsed.y;
@@ -609,19 +634,11 @@ function buildGroupedChart(canvasId, toggleId, countries, dataKey, labels, chart
           }
         }
       },
-      scales:{
-        x:{
-          ticks:{ font:{size:10} },
-          grid:{ color:'rgba(30,45,69,.5)' }
-        },
-        y:{ grid:{ color:'rgba(30,45,69,.5)' } }
-      }
+      scales: scaleOpts
     })
   });
 
   CHARTS[canvasId] = chart;
-
-  // トグルボタンを生成
   buildToggles(toggleId, countries, chart);
 }
 
