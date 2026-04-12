@@ -521,7 +521,7 @@ body{
 <!-- ================================================
      ログイン画面
 ================================================ -->
-<div id="LOGIN_SCREEN">
+<div id="LOGIN_SCREEN" style="display:none">
   <div class="login-mark"></div>
   <div class="login-kokuname">National Operation System</div>
   <div class="login-title">国家運営ポータル</div>
@@ -558,7 +558,7 @@ body{
 <!-- ================================================
      ホーム（ログイン後）
 ================================================ -->
-<div id="HOME">
+<div id="HOME" style="display:none">
 
   <!-- ヘッダー -->
   <div class="hdr">
@@ -788,16 +788,34 @@ var LS_URL     = 'home_gas_url';
 var LS_SES     = 'home_session';
 
 var SESSION    = null; // { country, color, isAdmin }
-var NOTICE_ON  = false; // 現在の緊急連絡表示フラグ
+var NOTICE_ON  = true; // 現在の緊急連絡表示フラグ
 
-// ================================================
-//  起動
-// ================================================
-window.addEventListener('DOMContentLoaded', function(){
+var _initialized = false;
+
+window.addEventListener('DOMContentLoaded', function(){ initPage(false); });
+
+// persisted=true のとき bfcache からの復元（戻るボタン等）
+window.addEventListener('pageshow', function(e){
+  if(e.persisted){
+    // bfcache から復元された → 状態を完全リセットして再初期化
+    _initialized = false;
+    initPage(true);
+  }
+});
+
+function initPage(fromCache){
+  if(_initialized && !fromCache) return;
+  _initialized = true;
+
+  // ── UI を完全リセット ──────────────────────────
+  resetUI();
+
+  // ── GAS URL 読み込み ──────────────────────────
   var sv = localStorage.getItem(LS_URL);
   if(sv) GAS_URL = sv;
-  if(!GAS_URL.trim()){ showBanner(); }
 
+  // ── セッション読み込み ─────────────────────────
+  SESSION = null;
   try{
     var s = sessionStorage.getItem(LS_SES);
     if(s) SESSION = JSON.parse(s);
@@ -809,17 +827,57 @@ window.addEventListener('DOMContentLoaded', function(){
     loadMessages();
     loadNotice();
   } else {
+    if(!GAS_URL.trim()) showBanner();
     hideLoading();
     showLogin();
     if(GAS_URL) loadCntList();
   }
-});
+}
+
+// ページ全体のUI状態を初期値に戻す
+function resetUI(){
+  // 両画面を一旦隠す（LOVが上を覆っている間に切り替える）
+  document.getElementById('LOGIN_SCREEN').style.display = 'none';
+  document.getElementById('HOME').style.display         = 'none';
+  document.getElementById('NOTICE_BAR').classList.remove('visible');
+
+  // モーダルを全部閉じる
+  document.getElementById('M_SETTINGS').classList.remove('on');
+  document.getElementById('M_NOTICE').classList.remove('on');
+
+  // ログイン画面のフォームをリセット
+  var pwIn = document.getElementById('LPW');
+  if(pwIn){ pwIn.value = ''; pwIn.type = 'password'; }
+  var eyeBtn = document.getElementById('L_EYE');
+  if(eyeBtn) eyeBtn.textContent = '表示';
+  var errEl = document.getElementById('L_ERR');
+  if(errEl) errEl.textContent = '';
+  var pwWrap = document.getElementById('LPW_WRAP');
+  if(pwWrap) pwWrap.classList.remove('err');
+  var loginBtn = document.getElementById('L_BTN');
+  if(loginBtn){ loginBtn.disabled = false; loginBtn.textContent = 'ログイン'; }
+
+  // セレクトを「読込中」に戻す（国家リストは再取得する）
+  var sel = document.getElementById('L_CSEL');
+  if(sel && sel.tagName === 'SELECT'){
+    sel.innerHTML = '<option value="">-- 読込中 --</option>';
+  }
+
+  // BBS テキストエリアをリセット
+  var bbsTxt = document.getElementById('BBS_TEXT');
+  if(bbsTxt) bbsTxt.value = '';
+  var bbsChar = document.getElementById('BBS_CHAR');
+  if(bbsChar) bbsChar.textContent = '0 / 500';
+
+  // ローディングを表示
+  showLoading('LOADING...');
+}
 
 function showLogin(){
-  document.getElementById('LOGIN_SCREEN').style.display='flex';
+  document.getElementById('LOGIN_SCREEN').style.display = 'flex';
 }
 function hideLogin(){
-  document.getElementById('LOGIN_SCREEN').style.display='none';
+  document.getElementById('LOGIN_SCREEN').style.display = 'none';
 }
 
 // GAS URL バナー
@@ -1221,16 +1279,18 @@ function changeColor(){
 // ログアウト
 function doLogout(){
   if(!confirm('ログアウトしますか？')) return;
-  SESSION=null;
+  SESSION = null;
   sessionStorage.removeItem(LS_SES);
-  document.getElementById('HOME').style.display='none';
-  document.getElementById('NOTICE_BAR').classList.remove('visible');
-  closeSettings();
-  document.getElementById('LPW').value='';
-  document.getElementById('L_ERR').textContent='';
+  _initialized = false;
   toast('ログアウトしました','ok');
-  showLogin();
-  if(GAS_URL) loadCntList();
+  // 少し待ってからUIリセット（トーストを見せるため）
+  setTimeout(function(){
+    resetUI();
+    hideLoading();
+    if(!GAS_URL.trim()) showBanner();
+    showLogin();
+    if(GAS_URL) loadCntList();
+  }, 300);
 }
 
 // ================================================
