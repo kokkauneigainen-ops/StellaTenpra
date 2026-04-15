@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>メールボックス | 国家運営</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--s1:#0d1220;--s2:#121a2c;--s3:#1a2538;--s4:#1e2d40;
+  --bd:#1e2d45;--bd2:#152035;
+  --t1:#c8d8f0;--t2:#607898;--t3:#2e4260;
+  --ag:#10b981;--ar:#ef4444;--ay:#f59e0b;--ap:#a855f7;
+  --uc:#3b82f6;--uc2:#1d4ed8;
+  --hdr:52px;--tab:44px;
+}
+html,body{height:100%;overflow:hidden}
+body{display:flex;flex-direction:column;background:var(--bg);color:var(--t1);
+  font-family:'Hiragino Kaku Gothic ProN','Noto Sans JP','Courier New',monospace;
+  font-size:14px}
+
+/* ── Loading / Toast ── */
+#LOV{display:none;position:fixed;inset:0;z-index:3000;background:rgba(3,6,12,.9);
+  flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  backdrop-filter:blur(4px)}
+#LOV.on{display:flex}
+.spin{width:38px;height:38px;border:3px solid var(--bd);border-top-color:var(--uc);
+  border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ltxt{color:var(--t2);font-size:11px;letter-spacing:2px}
+.toast{position:fixed;top:calc(var(--hdr) + 10px);left:50%;
+  transform:translateX(-50%) translateY(-20px);
+  background:rgba(13,18,32,.97);color:var(--t1);
+  padding:10px 20px;border-radius:22px;border:1px solid var(--bd);
+  font-size:12px;z-index:2000;opacity:0;pointer-events:none;
+  transition:all .3s cubic-bezier(.22,1,.36,1);
+  white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis;
+  backdrop-filter:blur(8px)}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.ok{border-color:var(--ag);color:var(--ag)}
+.toast.er{border-color:var(--ar);color:var(--ar)}
+.toast.wa{border-color:var(--ay);color:var(--ay)}
+
+/* ── Header ── */
+.hdr{height:var(--hdr);flex-shrink:0;z-index:200;
+  background:rgba(7,9,15,.93);border-bottom:1px solid rgba(255,255,255,.07);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  display:flex;align-items:center;gap:10px;padding:0 12px;
+  box-shadow:0 2px 16px rgba(0,0,0,.5)}
+.hdr-back{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+  color:var(--t1);border-radius:8px;padding:7px 11px;
+  font-family:inherit;font-size:12px;cursor:pointer;
+  letter-spacing:.5px;white-space:nowrap;flex-shrink:0;transition:background .2s}
+.hdr-back:active{background:rgba(255,255,255,.12)}
+.hdr-flag{width:7px;height:30px;border-radius:3px;background:var(--uc);
+  box-shadow:0 0 10px var(--uc);flex-shrink:0}
+.hdr-info{flex:1;min-width:0}
+.hdr-sub{font-size:9px;color:var(--t3);letter-spacing:2px;text-transform:uppercase}
+.hdr-nation{font-size:16px;font-weight:900;color:#fff;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdr-r{display:flex;gap:6px;flex-shrink:0}
+.hdr-btn{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+  color:var(--t2);border-radius:8px;padding:6px 11px;
+  font-family:inherit;font-size:11px;cursor:pointer;transition:all .2s}
+.hdr-btn:active{background:rgba(255,255,255,.1)}
+.hdr-btn.admin{border-color:rgba(168,85,247,.3);color:#c084fc;
+  background:rgba(168,85,247,.08)}
+
+/* ── Tabs (受信/送信) ── */
+.tabs{height:var(--tab);flex-shrink:0;display:flex;
+  background:rgba(10,14,24,.96);border-bottom:1px solid rgba(255,255,255,.06)}
+.tab{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;
+  background:none;border:none;border-bottom:2px solid transparent;
+  color:var(--t3);font-family:inherit;font-size:12px;letter-spacing:.5px;
+  cursor:pointer;transition:color .18s,border-color .18s;padding-bottom:2px}
+.tab.on{color:var(--uc);border-bottom-color:var(--uc)}
+.tab-badge{display:inline-flex;align-items:center;justify-content:center;
+  min-width:18px;height:18px;padding:0 5px;border-radius:9px;
+  background:var(--ar);color:#fff;font-size:10px;font-weight:700}
+.tab-badge:empty{display:none}
+
+/* ── Mail List ── */
+.mail-list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:10px 12px 80px;scrollbar-width:thin;scrollbar-color:var(--bd) transparent}
+.mail-list::-webkit-scrollbar{width:3px}
+.mail-list::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px}
+
+.empty-box{display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:60px 24px;color:var(--t3);gap:10px}
+.empty-ico{width:48px;height:48px;border-radius:50%;
+  border:2px solid var(--bd);display:flex;align-items:center;justify-content:center}
+.empty-ico-inner{width:22px;height:16px;border:2px solid var(--t3);border-radius:2px;
+  position:relative}
+.empty-ico-inner::before{content:'';position:absolute;top:3px;left:3px;right:3px;
+  height:2px;background:var(--t3);box-shadow:0 4px 0 var(--t3)}
+.empty-txt{font-size:13px;letter-spacing:.5px}
+
+.mail-item{background:var(--s1);border:1px solid var(--bd2);border-radius:12px;
+  padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:all .18s;
+  position:relative;overflow:hidden}
+.mail-item::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+  border-radius:3px 0 0 3px}
+.mail-item.from-admin::before{background:var(--ar)}
+.mail-item.from-all::before{background:var(--ay)}
+.mail-item.from-org::before{background:var(--ap)}
+.mail-item.from-normal::before{background:var(--ac)}
+.mail-item:active{background:var(--s2);transform:scale(.995)}
+.mi-top{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.mi-from{font-size:12px;font-weight:700;color:var(--t1)}
+.mi-to-badge{font-size:9px;padding:2px 7px;border-radius:8px;border:1px solid;
+  letter-spacing:.5px;white-space:nowrap;flex-shrink:0}
+.mi-to-badge.all{background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.22);color:var(--ay)}
+.mi-to-badge.org{background:rgba(168,85,247,.08);border-color:rgba(168,85,247,.22);color:var(--ap)}
+.mi-to-badge.personal{background:rgba(59,130,246,.08);border-color:rgba(59,130,246,.22);color:var(--uc)}
+.mi-time{margin-left:auto;font-size:10px;color:var(--t3);flex-shrink:0;white-space:nowrap}
+.mi-subject{font-size:13px;font-weight:700;color:var(--t1);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
+.mi-preview{font-size:11px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ── FAB (送信ボタン) ── */
+#FAB{
+  position:fixed;right:16px;bottom:20px;z-index:100;
+  width:54px;height:54px;border-radius:50%;border:none;cursor:pointer;
+  background:linear-gradient(135deg,var(--uc),var(--uc2));color:#fff;
+  font-size:22px;font-family:inherit;
+  box-shadow:0 6px 20px rgba(59,130,246,.45);
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s}
+#FAB:active{transform:scale(.93)}
+/* 鉛筆アイコン */
+.fab-ico{width:20px;height:20px;position:relative}
+.fab-ico::before{content:'';position:absolute;
+  top:1px;left:3px;right:1px;bottom:5px;
+  background:#fff;border-radius:2px 4px 2px 2px;
+  transform:rotate(45deg);transform-origin:bottom left;opacity:.9}
+.fab-ico::after{content:'';position:absolute;
+  bottom:0;left:0;width:0;height:0;
+  border-style:solid;border-width:0 5px 5px 0;border-color:transparent #fff transparent transparent}
+
+/* ── Modals ── */
+.mover{display:none;position:fixed;inset:0;z-index:800;
+  background:rgba(3,6,12,.88);align-items:flex-end;justify-content:center;
+  backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
+.mover.on{display:flex}
+.modal{background:var(--s1);border:1px solid var(--bd);
+  border-radius:14px 14px 0 0;width:100%;max-width:580px;max-height:90vh;
+  overflow:hidden;display:flex;flex-direction:column;
+  box-shadow:0 -8px 40px rgba(0,0,0,.7);animation:sup .26s cubic-bezier(.22,1,.36,1)}
+@keyframes sup{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.m-handle{display:flex;justify-content:center;padding:10px 0 4px}
+.m-hbar{width:36px;height:4px;background:var(--bd);border-radius:2px}
+.m-hdr{padding:6px 16px 12px;border-bottom:1px solid var(--bd);
+  display:flex;align-items:center;justify-content:space-between}
+.m-ttl{font-size:15px;font-weight:700;color:var(--t1)}
+.m-cls{background:var(--s2);border:1px solid var(--bd);color:var(--t2);
+  width:30px;height:30px;border-radius:50%;cursor:pointer;
+  font-size:13px;font-family:inherit;display:flex;align-items:center;justify-content:center}
+.m-body{flex:1;overflow-y:auto;padding:14px 16px 10px;-webkit-overflow-scrolling:touch}
+.m-foot{padding:12px 16px;border-top:1px solid var(--bd);
+  padding-bottom:max(12px,env(safe-area-inset-bottom,12px))}
+
+/* Form elements */
+.fl{display:block;font-size:9px;color:var(--t3);letter-spacing:1.5px;
+  text-transform:uppercase;margin-bottom:6px;margin-top:12px}
+.fl:first-child{margin-top:0}
+.finp{width:100%;background:var(--s2);border:1px solid var(--bd);
+  color:var(--t1);padding:11px 14px;border-radius:10px;
+  font-family:inherit;font-size:13px;outline:none;transition:border-color .2s}
+.finp:focus{border-color:var(--uc);box-shadow:0 0 0 3px rgba(59,130,246,.08)}
+.finp::placeholder{color:var(--t3)}
+textarea.finp{resize:none;line-height:1.6;min-height:100px}
+.fsel{width:100%;background:var(--s2);border:1px solid var(--bd);
+  color:var(--t1);padding:11px 40px 11px 14px;border-radius:10px;
+  font-family:inherit;font-size:13px;outline:none;
+  appearance:none;-webkit-appearance:none;cursor:pointer;transition:border-color .2s}
+.fsel:focus{border-color:var(--uc)}
+.fsel-wrap{position:relative}
+.fsel-arr{position:absolute;right:13px;top:50%;transform:translateY(-50%);
+  pointer-events:none;color:var(--t3);font-size:10px}
+.char-cnt{text-align:right;font-size:10px;color:var(--t3);margin-top:4px}
+
+.sbtn{width:100%;padding:13px;border:none;border-radius:10px;font-family:inherit;
+  font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;transition:all .2s}
+.sbtn-ac{background:linear-gradient(135deg,var(--uc),var(--uc2));color:#fff;
+  box-shadow:0 4px 14px rgba(59,130,246,.28)}
+.sbtn-ac:active{transform:scale(.98)}
+.sbtn-ac:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.sbtn-del{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.22);color:var(--ar)}
+.sbtn-del:active{background:rgba(239,68,68,.14)}
+
+/* Mail Detail */
+.md-meta{padding:10px 12px;background:var(--s2);border:1px solid var(--bd2);
+  border-radius:10px;margin-bottom:12px}
+.md-row{display:flex;gap:6px;margin-bottom:4px;font-size:12px}
+.md-row:last-child{margin-bottom:0}
+.md-lbl{color:var(--t3);white-space:nowrap;min-width:36px}
+.md-val{color:var(--t1);word-break:break-all}
+.md-subject{font-size:16px;font-weight:900;color:#fff;margin-bottom:14px;line-height:1.4}
+.md-body{font-size:14px;color:var(--t1);line-height:1.75;
+  white-space:pre-wrap;word-break:break-all;
+  background:var(--s2);border:1px solid var(--bd2);border-radius:10px;
+  padding:14px;margin-bottom:4px}
+
+/* Org Management */
+.org-sec{font-size:9px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;
+  display:flex;align-items:center;gap:8px;margin:14px 0 8px}
+.org-sec::after{content:'';flex:1;height:1px;background:var(--bd)}
+.org-card{background:var(--s2);border:1px solid var(--bd2);border-radius:10px;
+  padding:12px 14px;margin-bottom:8px}
+.org-card-top{display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:8px}
+.org-name{font-size:14px;font-weight:700;color:var(--t1)}
+.org-del-btn{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);
+  color:var(--ar);font-family:inherit;font-size:10px;padding:4px 10px;
+  border-radius:7px;cursor:pointer;letter-spacing:.5px;transition:background .2s}
+.org-del-btn:active{background:rgba(239,68,68,.15)}
+.org-members{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+.org-member-chip{display:flex;align-items:center;gap:5px;
+  padding:4px 8px 4px 10px;border-radius:14px;
+  background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.18);
+  font-size:11px;color:var(--t1)}
+.org-member-rm{background:none;border:none;color:var(--t3);
+  font-size:12px;cursor:pointer;padding:0;line-height:1;font-family:inherit}
+.org-member-rm:hover{color:var(--ar)}
+.org-add-row{display:flex;gap:6px}
+.org-add-sel{flex:1;background:var(--s3);border:1px solid var(--bd);color:var(--t1);
+  padding:7px 10px;border-radius:8px;font-family:inherit;font-size:12px;outline:none;
+  appearance:none;-webkit-appearance:none;cursor:pointer}
+.org-add-btn{background:linear-gradient(135deg,var(--uc),var(--uc2));
+  border:none;color:#fff;padding:7px 14px;border-radius:8px;
+  font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;
+  white-space:nowrap;transition:all .2s}
+.org-add-btn:active{transform:scale(.97)}
+.org-empty-members{font-size:11px;color:var(--t3);font-style:italic;margin-bottom:8px}
+.new-org-row{display:flex;gap:6px;margin-top:4px}
+.new-org-inp{flex:1;background:var(--s2);border:1px solid var(--bd);color:var(--t1);
+  padding:10px 12px;border-radius:9px;font-family:inherit;font-size:13px;outline:none}
+.new-org-inp:focus{border-color:var(--ap)}
+.new-org-btn{background:linear-gradient(135deg,#7c3aed,#a855f7);border:none;
+  color:#fff;padding:10px 14px;border-radius:9px;
+  font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;
+  white-space:nowrap;box-shadow:0 3px 10px rgba(168,85,247,.25)}
+.new-org-btn:active{transform:scale(.97)}
+
+/* GAS URL バナー */
+#CFG{display:none;background:rgba(245,158,11,.1);border-bottom:1px solid rgba(245,158,11,.3);
+  padding:8px 12px;align-items:center;gap:8px;font-size:11px;color:var(--ay)}
+#CFG.on{display:flex}
+#CFG input{flex:1;background:rgba(0,0,0,.4);border:1px solid rgba(245,158,11,.3);
+  color:#fde68a;font-family:inherit;font-size:11px;padding:6px 10px;border-radius:6px;outline:none;min-width:0}
+#CFG button{background:rgba(245,158,11,.18);border:1px solid rgba(245,158,11,.35);
+  color:var(--ay);font-family:inherit;font-size:10px;padding:6px 10px;
+  border-radius:6px;cursor:pointer;white-space:nowrap;flex-shrink:0}
+</style>
+</head>
+<body>
+
+<div id="LOV" class="on"><div class="spin"></div><div class="ltxt" id="LOV_TXT">読込中...</div></div>
+<div class="toast" id="TOAST"></div>
+
+<!-- Header -->
+<div class="hdr">
+  <button class="hdr-back" onclick="history.back()">← 戻る</button>
+  <div class="hdr-flag" id="H_FLAG"></div>
+  <div class="hdr-info">
+    <div class="hdr-sub">メールボックス</div>
+    <div class="hdr-nation" id="H_NAME">--</div>
+  </div>
+  <div class="hdr-r">
+    <button class="hdr-btn" id="ORG_BTN" onclick="openOrg()" style="display:none">組織管理</button>
+    <button class="hdr-btn" onclick="loadMails()">更新</button>
+  </div>
+</div>
+
+<!-- GAS URL バナー -->
+<div id="CFG" class="on">
+  <span style="flex-shrink:0;font-size:10px">GAS URL</span>
+  <input type="text" id="CFG_IN" placeholder="https://script.google.com/macros/s/.../exec">
+  <button onclick="saveUrl()">保存して読込</button>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab on" id="TAB_IN"  onclick="setTab('inbox')">受信箱 <span class="tab-badge" id="INBOX_BADGE"></span></button>
+  <button class="tab"    id="TAB_OUT" onclick="setTab('sent')">送信済み</button>
+</div>
+
+<!-- Mail List -->
+<div class="mail-list" id="MAIL_LIST">
+  <div class="empty-box">
+    <div class="empty-ico"><div class="empty-ico-inner"></div></div>
+    <div class="empty-txt">読込中...</div>
+  </div>
+</div>
+
+<!-- FAB 送信ボタン -->
+<button id="FAB" onclick="openCompose()" title="新規メール作成">
+  <div class="fab-ico"></div>
+</button>
+
+<!-- ═══ Mail Detail Modal ═══ -->
+<div class="mover" id="M_DETAIL" onclick="if(event.target===this)mc('M_DETAIL')">
+  <div class="modal">
+    <div class="m-handle"><div class="m-hbar"></div></div>
+    <div class="m-hdr">
+      <div class="m-ttl">メール詳細</div>
+      <button class="m-cls" onclick="mc('M_DETAIL')">X</button>
+    </div>
+    <div class="m-body" id="DETAIL_BODY"></div>
+    <div class="m-foot" id="DETAIL_FOOT"></div>
+  </div>
+</div>
+
+<!-- ═══ Compose Modal ═══ -->
+<div class="mover" id="M_COMPOSE" onclick="if(event.target===this)mc('M_COMPOSE')">
+  <div class="modal">
+    <div class="m-handle"><div class="m-hbar"></div></div>
+    <div class="m-hdr">
+      <div class="m-ttl">新規メール</div>
+      <button class="m-cls" onclick="mc('M_COMPOSE')">X</button>
+    </div>
+    <div class="m-body">
+      <label class="fl">宛先</label>
+      <div class="fsel-wrap">
+        <select class="fsel" id="C_TO">
+          <option value="">-- 宛先を選択 --</option>
+          <option value="ALL">ALL（全員）</option>
+        </select>
+        <span class="fsel-arr">▼</span>
+      </div>
+      <label class="fl">件名</label>
+      <input type="text" class="finp" id="C_SUBJ" placeholder="件名を入力" maxlength="100">
+      <label class="fl">本文</label>
+      <textarea class="finp" id="C_BODY" placeholder="本文を入力..." maxlength="2000" rows="6"
+        oninput="document.getElementById('C_CHAR').textContent=this.value.length+' / 2000'"></textarea>
+      <div class="char-cnt" id="C_CHAR">0 / 2000</div>
+    </div>
+    <div class="m-foot">
+      <button class="sbtn sbtn-ac" id="SEND_BTN" onclick="doSend()">送信する</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Org Management Modal ═══ -->
+<div class="mover" id="M_ORG" onclick="if(event.target===this)mc('M_ORG')">
+  <div class="modal">
+    <div class="m-handle"><div class="m-hbar"></div></div>
+    <div class="m-hdr">
+      <div class="m-ttl">組織管理</div>
+      <button class="m-cls" onclick="mc('M_ORG')">X</button>
+    </div>
+    <div class="m-body" id="ORG_BODY"></div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════
+//  設定
+// ════════════════════════════════════════════════════
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbzSRJSK7hUM_zfhZo4WqCmb3aK8x6P1O3y5peLNdM5BlBGfOKcIzQOHQconmquxMAqO/exec'; 
+
+var LS_URL   = 'mail_gas_url';
+var LS_SES   = 'home_session';
+var ADMIN_PW = '03280317';
+
+var SESSION  = null;
+var COUNTRIES= [];
+var COLORS   = {};
+var ORGS     = [];
+var CURRENT_BOX  = 'inbox';
+var CURRENT_MAILS= [];
+var DETAIL_MAIL  = null;
+
+// ════════════════════════════════════════════════════
+//  起動
+// ════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', function(){
+  var sv = localStorage.getItem(LS_URL);
+  if(sv) GAS_URL = sv;
+
+  try{ var s=sessionStorage.getItem(LS_SES); if(s) SESSION=JSON.parse(s); }catch(e){}
+
+  if(!SESSION){
+    hideLoading();
+    toast('home.htmlからログインしてください','er');
+    setTimeout(function(){location.href='home.html';},2000);
+    return;
+  }
+
+  var c = SESSION.color||'#3b82f6';
+  document.getElementById('H_NAME').textContent = SESSION.country;
+  document.getElementById('H_FLAG').style.cssText='background:'+c+';box-shadow:0 0 10px '+c;
+  document.documentElement.style.setProperty('--uc', c);
+  document.documentElement.style.setProperty('--uc2', darken(c,.28));
+
+  // 運営ボタン表示
+  if(SESSION.isAdmin) document.getElementById('ORG_BTN').style.display='block';
+
+  if(!GAS_URL.trim()){
+    document.getElementById('CFG').classList.add('on');
+    document.getElementById('CFG_IN').value='';
+    hideLoading();
+    return;
+  }
+  document.getElementById('CFG').classList.remove('on');
+  initLoad();
+});
+
+function saveUrl(){
+  var v=document.getElementById('CFG_IN').value.trim();
+  if(!v){toast('URLを入力してください','er');return;}
+  GAS_URL=v; localStorage.setItem(LS_URL,v);
+  document.getElementById('CFG').classList.remove('on');
+  initLoad();
+}
+
+function initLoad(){
+  showLoading('読込中...');
+  // 国家・組織・メールを並列取得
+  Promise.all([
+    fetch(GAS_URL+'?action=getCountries').then(function(r){return r.json();}).catch(function(){return null;}),
+    fetch(GAS_URL+'?action=getOrgs').then(function(r){return r.json();}).catch(function(){return null;}),
+  ]).then(function(results){
+    var cntData = results[0], orgData = results[1];
+    if(cntData && cntData.success){ COUNTRIES=cntData.countries||[]; COLORS=cntData.colors||{}; }
+    if(orgData && orgData.success){ ORGS=orgData.orgs||[]; }
+    buildComposeOptions();
+    return loadMails();
+  }).then(function(){
+    hideLoading();
+  }).catch(function(e){
+    hideLoading(); toast('初期化エラー: '+e,'er');
+  });
+}
+
+// ════════════════════════════════════════════════════
+//  タブ切替
+// ════════════════════════════════════════════════════
+function setTab(box){
+  CURRENT_BOX = box;
+  document.getElementById('TAB_IN').classList.toggle('on', box==='inbox');
+  document.getElementById('TAB_OUT').classList.toggle('on', box==='sent');
+  loadMails();
+}
+
+// ════════════════════════════════════════════════════
+//  メール読込
+// ════════════════════════════════════════════════════
+function loadMails(){
+  if(!GAS_URL||!SESSION) return Promise.resolve();
+  var url = GAS_URL+'?action=getMails&country='+encodeURIComponent(SESSION.country)+
+    '&box='+CURRENT_BOX;
+  return fetch(url)
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d||!d.success){toast(d?d.error:'取得失敗','er');return;}
+      CURRENT_MAILS = d.mails||[];
+      renderMailList(CURRENT_MAILS);
+      // 受信箱のバッジ更新（全件数）
+      if(CURRENT_BOX==='inbox'){
+        var badge=document.getElementById('INBOX_BADGE');
+        badge.textContent=CURRENT_MAILS.length>0?CURRENT_MAILS.length:'';
+      }
+    })
+    .catch(function(e){toast('通信エラー: '+e,'er');});
+}
+
+// ════════════════════════════════════════════════════
+//  メールリスト描画
+// ════════════════════════════════════════════════════
+function renderMailList(mails){
+  var el=document.getElementById('MAIL_LIST');
+  if(!mails.length){
+    el.innerHTML='<div class="empty-box">'+
+      '<div class="empty-ico"><div class="empty-ico-inner"></div></div>'+
+      '<div class="empty-txt">'+(CURRENT_BOX==='inbox'?'受信メールなし':'送信済みメールなし')+'</div></div>';
+    return;
+  }
+  var html='';
+  mails.forEach(function(m,idx){
+    var toType = m.to==='ALL'?'all': (ORGS.some(function(o){return o.name===m.to;}))?'org':'personal';
+    var toLabel = m.to==='ALL'?'ALL': toType==='org'?('組織: '+m.to): m.to;
+    var colorClass = m.from==='運営'?'from-admin':
+      m.to==='ALL'?'from-all': toType==='org'?'from-org':'from-normal';
+    var preview = m.body.replace(/\n/g,' ').substring(0,60)+(m.body.length>60?'…':'');
+    html+='<div class="mail-item '+colorClass+'" onclick="openDetail('+idx+')">'+
+      '<div class="mi-top">'+
+        '<span class="mi-from">'+esc(CURRENT_BOX==='sent'?'→ '+m.to:m.from)+'</span>'+
+        '<span class="mi-to-badge '+toType+'">'+esc(toLabel)+'</span>'+
+        '<span class="mi-time">'+esc(m.ts.replace(/\d{4}\//,''))+'</span>'+
+      '</div>'+
+      '<div class="mi-subject">'+esc(m.subject)+'</div>'+
+      '<div class="mi-preview">'+esc(preview)+'</div>'+
+      '</div>';
+  });
+  el.innerHTML=html;
+}
+
+// ════════════════════════════════════════════════════
+//  メール詳細モーダル
+// ════════════════════════════════════════════════════
+function openDetail(idx){
+  var m=CURRENT_MAILS[idx]; if(!m) return;
+  DETAIL_MAIL=m;
+  var toType=m.to==='ALL'?'all':(ORGS.some(function(o){return o.name===m.to;}))?'org':'personal';
+  var toLabel=m.to==='ALL'?'ALL（全員）':toType==='org'?'組織: '+m.to:m.to;
+  var body=document.getElementById('DETAIL_BODY');
+  body.innerHTML=
+    '<div class="md-subject">'+esc(m.subject)+'</div>'+
+    '<div class="md-meta">'+
+      '<div class="md-row"><span class="md-lbl">From</span><span class="md-val">'+esc(m.from)+'</span></div>'+
+      '<div class="md-row"><span class="md-lbl">To</span><span class="md-val">'+esc(toLabel)+'</span></div>'+
+      '<div class="md-row"><span class="md-lbl">日時</span><span class="md-val">'+esc(m.ts)+'</span></div>'+
+    '</div>'+
+    '<div class="md-body">'+esc(m.body)+'</div>';
+
+  var foot=document.getElementById('DETAIL_FOOT');
+  // 運営は削除可能
+  if(SESSION&&SESSION.isAdmin){
+    foot.innerHTML='<button class="sbtn sbtn-del" onclick="doDelete('+m.rowNum+')">このメールを削除</button>';
+  } else {
+    // 返信ボタン
+    foot.innerHTML='<button class="sbtn sbtn-ac" onclick="openReply()">返信する</button>';
+  }
+  mo('M_DETAIL');
+}
+
+function doDelete(rowNum){
+  if(!confirm('このメールを削除しますか？')) return;
+  mc('M_DETAIL');
+  showLoading('削除中...');
+  fetch(GAS_URL+'?action=deleteMail&rowNum='+rowNum+'&adminPW='+encodeURIComponent(ADMIN_PW))
+    .then(function(r){return r.json();})
+    .then(function(d){
+      hideLoading();
+      if(d&&d.success){toast('削除しました','ok');loadMails();}
+      else toast(d?d.error:'削除エラー','er');
+    }).catch(function(e){hideLoading();toast('通信エラー: '+e,'er');});
+}
+
+function openReply(){
+  if(!DETAIL_MAIL) return;
+  mc('M_DETAIL');
+  // 送信者に返信
+  var replyTo = DETAIL_MAIL.from;
+  document.getElementById('C_TO').value = replyTo;
+  document.getElementById('C_SUBJ').value = 'Re: ' + DETAIL_MAIL.subject;
+  document.getElementById('C_BODY').value = '';
+  document.getElementById('C_CHAR').textContent = '0 / 2000';
+  mo('M_COMPOSE');
+}
+
+// ════════════════════════════════════════════════════
+//  作成モーダル
+// ════════════════════════════════════════════════════
+function buildComposeOptions(){
+  var sel=document.getElementById('C_TO');
+  // 既存のoption(ALL以外)を削除して再構築
+  while(sel.options.length > 2) sel.remove(2);
+
+  // 仕切り: 組織
+  if(ORGS.length){
+    var og=document.createElement('optgroup');
+    og.label='── 組織 ──';
+    ORGS.forEach(function(o){
+      var opt=document.createElement('option');
+      opt.value=o.name; opt.textContent='[組織] '+o.name+' ('+o.members.length+'国)';
+      og.appendChild(opt);
+    });
+    sel.appendChild(og);
+  }
+
+  // 仕切り: 個人
+  var pg=document.createElement('optgroup');
+  pg.label='── 個人 ──';
+  COUNTRIES.forEach(function(c){
+    if(c===SESSION.country) return; // 自分は除く
+    var opt=document.createElement('option');
+    opt.value=c; opt.textContent=c;
+    pg.appendChild(opt);
+  });
+  sel.appendChild(pg);
+}
+
+function openCompose(){
+  document.getElementById('C_TO').value='';
+  document.getElementById('C_SUBJ').value='';
+  document.getElementById('C_BODY').value='';
+  document.getElementById('C_CHAR').textContent='0 / 2000';
+  mo('M_COMPOSE');
+}
+
+function doSend(){
+  if(!SESSION) return;
+  var to   =document.getElementById('C_TO').value;
+  var subj =document.getElementById('C_SUBJ').value.trim();
+  var body =document.getElementById('C_BODY').value.trim();
+  if(!to)  {toast('宛先を選択してください','wa');return;}
+  if(!subj){toast('件名を入力してください','wa');return;}
+  if(!body){toast('本文を入力してください','wa');return;}
+
+  var btn=document.getElementById('SEND_BTN');
+  btn.disabled=true; btn.textContent='送信中...';
+  showLoading('送信中...');
+  var url=GAS_URL+'?action=sendMail'+
+    '&from='+encodeURIComponent(SESSION.country)+
+    '&to='+encodeURIComponent(to)+
+    '&subject='+encodeURIComponent(subj)+
+    '&body='+encodeURIComponent(body);
+  fetch(url)
+    .then(function(r){return r.json();})
+    .then(function(d){
+      hideLoading(); btn.disabled=false; btn.textContent='送信する';
+      if(d&&d.success){
+        toast('送信しました','ok'); mc('M_COMPOSE');
+        setTab('sent');
+      } else toast(d?d.error:'送信エラー','er');
+    })
+    .catch(function(e){
+      hideLoading(); btn.disabled=false; btn.textContent='送信する';
+      toast('通信エラー: '+e,'er');
+    });
+}
+
+// ════════════════════════════════════════════════════
+//  組織管理モーダル（運営のみ）
+// ════════════════════════════════════════════════════
+function openOrg(){
+  renderOrgBody();
+  mo('M_ORG');
+}
+
+function renderOrgBody(){
+  var b=document.getElementById('ORG_BODY');
+  var html='';
+
+  // 新規組織作成
+  html+='<div class="org-sec">新しい組織を作成</div>';
+  html+='<div class="new-org-row">'+
+    '<input type="text" class="new-org-inp" id="NEW_ORG_NM" placeholder="組織名を入力">'+
+    '<button class="new-org-btn" onclick="createOrg()">作成</button>'+
+    '</div>';
+
+  // 既存組織
+  html+='<div class="org-sec">組織一覧</div>';
+  if(!ORGS.length){
+    html+='<div style="color:var(--t3);font-size:12px;text-align:center;padding:20px">組織はまだありません</div>';
+  } else {
+    ORGS.forEach(function(o, oi){
+      html+='<div class="org-card">';
+      html+='<div class="org-card-top">'+
+        '<span class="org-name">'+esc(o.name)+'</span>'+
+        '<button class="org-del-btn" onclick="deleteOrg(\''+escj(o.name)+'\')">組織を削除</button>'+
+        '</div>';
+      // メンバーリスト
+      if(!o.members.length){
+        html+='<div class="org-empty-members">メンバーなし</div>';
+      } else {
+        html+='<div class="org-members">';
+        o.members.forEach(function(m){
+          var col=COLORS[m]||'#334455';
+          html+='<div class="org-member-chip">'+
+            '<div style="width:7px;height:7px;border-radius:50%;background:'+esc(col)+';flex-shrink:0"></div>'+
+            esc(m)+
+            '<button class="org-member-rm" onclick="removeMember(\''+escj(o.name)+'\',\''+escj(m)+'\')">x</button>'+
+            '</div>';
+        });
+        html+='</div>';
+      }
+      // メンバー追加セレクト
+      html+='<div class="org-add-row">'+
+        '<select class="org-add-sel" id="ADD_SEL_'+oi+'">'+
+          '<option value="">追加する国家を選択</option>';
+      COUNTRIES.forEach(function(c){
+        if(o.members.indexOf(c)===-1){
+          html+='<option value="'+esc(c)+'">'+esc(c)+'</option>';
+        }
+      });
+      html+='</select>'+
+        '<button class="org-add-btn" onclick="addMember(\''+escj(o.name)+'\','+oi+')">追加</button>'+
+        '</div>';
+      html+='</div>'; // org-card
+    });
+  }
+
+  b.innerHTML=html;
+}
+
+function createOrg(){
+  var name=document.getElementById('NEW_ORG_NM').value.trim();
+  if(!name){toast('組織名を入力してください','wa');return;}
+  showLoading('作成中...');
+  fetch(GAS_URL+'?action=createOrg&orgName='+encodeURIComponent(name)+'&adminPW='+encodeURIComponent(ADMIN_PW))
+    .then(function(r){return r.json();})
+    .then(function(d){
+      hideLoading();
+      if(d&&d.success){
+        toast('「'+name+'」を作成しました','ok');
+        return refreshOrgs();
+      } else toast(d?d.error:'作成エラー','er');
+    }).catch(function(e){hideLoading();toast('通信エラー: '+e,'er');});
+}
+
+function deleteOrg(orgName){
+  if(!confirm('「'+orgName+'」を削除しますか？\nこの組織への送信履歴は残ります。')) return;
+  showLoading('削除中...');
+  fetch(GAS_URL+'?action=deleteOrg&orgName='+encodeURIComponent(orgName)+'&adminPW='+encodeURIComponent(ADMIN_PW))
+    .then(function(r){return r.json();})
+    .then(function(d){
+      hideLoading();
+      if(d&&d.success){toast('削除しました','ok');return refreshOrgs();}
+      else toast(d?d.error:'削除エラー','er');
+    }).catch(function(e){hideLoading();toast('通信エラー: '+e,'er');});
+}
+
+function addMember(orgName, selIdx){
+  var sel=document.getElementById('ADD_SEL_'+selIdx);
+  var country=sel?sel.value:'';
+  if(!country){toast('国家を選択してください','wa');return;}
+  showLoading('追加中...');
+  fetch(GAS_URL+'?action=addMember&orgName='+encodeURIComponent(orgName)+
+    '&country='+encodeURIComponent(country)+'&adminPW='+encodeURIComponent(ADMIN_PW))
+    .then(function(r){return r.json();})
+    .then(function(d){
+      hideLoading();
+      if(d&&d.success){toast(country+'を追加しました','ok');return refreshOrgs();}
+      else toast(d?d.error:'追加エラー','er');
+    }).catch(function(e){hideLoading();toast('通信エラー: '+e,'er');});
+}
+
+function removeMember(orgName, country){
+  if(!confirm('「'+country+'」を「'+orgName+'」から除外しますか？')) return;
+  showLoading('除外中...');
+  fetch(GAS_URL+'?action=removeMember&orgName='+encodeURIComponent(orgName)+
+    '&country='+encodeURIComponent(country)+'&adminPW='+encodeURIComponent(ADMIN_PW))
+    .then(function(r){return r.json();})
+    .then(function(d){
+      hideLoading();
+      if(d&&d.success){toast(country+'を除外しました','ok');return refreshOrgs();}
+      else toast(d?d.error:'除外エラー','er');
+    }).catch(function(e){hideLoading();toast('通信エラー: '+e,'er');});
+}
+
+function refreshOrgs(){
+  return fetch(GAS_URL+'?action=getOrgs')
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d&&d.success){ ORGS=d.orgs||[]; buildComposeOptions(); renderOrgBody(); }
+    });
+}
+
+// ════════════════════════════════════════════════════
+//  ユーティリティ
+// ════════════════════════════════════════════════════
+function mo(id){document.getElementById(id).classList.add('on');}
+function mc(id){document.getElementById(id).classList.remove('on');}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function escj(s){return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"');}
+function darken(hex,a){
+  hex=(hex||'#3b82f6').replace('#','');
+  if(hex.length===3)hex=hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+  var r=Math.max(0,Math.round(parseInt(hex.substr(0,2),16)*(1-a)));
+  var g=Math.max(0,Math.round(parseInt(hex.substr(2,2),16)*(1-a)));
+  var b=Math.max(0,Math.round(parseInt(hex.substr(4,2),16)*(1-a)));
+  return '#'+(r<16?'0':'')+r.toString(16)+(g<16?'0':'')+g.toString(16)+(b<16?'0':'')+b.toString(16);
+}
+function showLoading(t){document.getElementById('LOV_TXT').textContent=t||'読込中...';document.getElementById('LOV').classList.add('on');}
+function hideLoading(){document.getElementById('LOV').classList.remove('on');}
+var _tt;
+function toast(msg,type){
+  var el=document.getElementById('TOAST');
+  el.textContent=msg;el.className='toast on '+(type||'');
+  clearTimeout(_tt);_tt=setTimeout(function(){el.className='toast';},3500);
+}
+</script>
+</body>
+</html>
