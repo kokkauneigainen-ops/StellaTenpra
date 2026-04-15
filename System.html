@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>民間システム | 国家運営</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --hdr:52px;
+  --bd:#1e2d45;--t1:#c8d8f0;--t2:#607898;--t3:#2e4260;
+  --ag:#10b981;--ay:#f59e0b;--ar:#ef4444;--ac:#3b82f6;
+}
+html{height:100%;touch-action:none}
+body{
+  display:flex;flex-direction:column;height:100%;
+  background:#000;overflow:hidden;
+  font-family:'Hiragino Kaku Gothic ProN','Noto Sans JP','Courier New',monospace;
+  font-size:14px;color:var(--t1);
+}
+
+/* ─ 背景 ─ */
+#BG{
+  position:fixed;inset:0;z-index:0;
+  background:url('back.jpg') center/cover no-repeat;
+}
+#BG::after{
+  content:'';position:absolute;inset:0;
+  background:rgba(0,0,6,.72);
+}
+
+/* ─ ローディング / トースト ─ */
+#LOV{display:none;position:fixed;inset:0;z-index:4000;
+  background:rgba(0,0,8,.9);flex-direction:column;
+  align-items:center;justify-content:center;gap:16px}
+#LOV.on{display:flex}
+.spin{width:38px;height:38px;border:2px solid rgba(255,255,255,.15);
+  border-top-color:#e8d5a3;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ltxt{color:rgba(232,213,163,.7);font-size:11px;letter-spacing:3px;text-transform:uppercase}
+.toast{position:fixed;top:calc(var(--hdr)+10px);left:50%;
+  transform:translateX(-50%) translateY(-20px);
+  background:rgba(8,12,28,.95);color:var(--t1);
+  padding:10px 20px;border-radius:22px;border:1px solid rgba(255,255,255,.1);
+  font-size:12px;z-index:3000;opacity:0;pointer-events:none;
+  transition:all .3s cubic-bezier(.22,1,.36,1);
+  white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis;
+  backdrop-filter:blur(10px)}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.er{border-color:rgba(239,68,68,.4);color:var(--ar)}
+.toast.ok{border-color:rgba(16,185,129,.4);color:var(--ag)}
+
+/* ─ ヘッダー ─ */
+.hdr{
+  height:var(--hdr);flex-shrink:0;position:relative;z-index:300;
+  background:rgba(2,4,14,.88);border-bottom:1px solid rgba(255,255,255,.06);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  display:flex;align-items:center;gap:10px;padding:0 14px;
+  box-shadow:0 2px 20px rgba(0,0,0,.6);
+}
+.hbk{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+  color:var(--t1);border-radius:8px;padding:7px 11px;font-family:inherit;
+  font-size:12px;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:background .2s}
+.hbk:active{background:rgba(255,255,255,.12)}
+.hdr-icon{
+  width:28px;height:28px;flex-shrink:0;position:relative;
+  display:flex;align-items:center;justify-content:center;
+}
+/* 星アイコン（CSS） */
+.hdr-icon::before{
+  content:'';position:absolute;
+  width:14px;height:14px;background:#e8d5a3;
+  clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);
+  filter:drop-shadow(0 0 6px #e8d5a3);
+}
+.hdr-texts{flex:1;min-width:0}
+.hdr-title{font-size:14px;font-weight:900;color:#e8d5a3;letter-spacing:1px;
+  text-shadow:0 0 14px rgba(232,213,163,.4)}
+.hdr-sub{font-size:9px;color:rgba(232,213,163,.4);letter-spacing:2px;text-transform:uppercase}
+.hdr-r{display:flex;gap:6px;flex-shrink:0}
+.hdr-btn{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+  color:rgba(232,213,163,.6);border-radius:8px;padding:6px 11px;
+  font-family:inherit;font-size:11px;cursor:pointer;transition:all .2s}
+.hdr-btn:active{background:rgba(255,255,255,.1)}
+
+/* ─ ヒント ─ */
+#HINT{
+  position:relative;z-index:2;
+  text-align:center;padding:5px 14px;
+  font-size:10px;color:rgba(232,213,163,.35);letter-spacing:1px;
+  background:rgba(0,0,8,.5);flex-shrink:0;
+  border-bottom:1px solid rgba(255,255,255,.04);
+}
+
+/* ─ キャンバスエリア ─ */
+#MVP{
+  flex:1;overflow:hidden;position:relative;z-index:1;
+  touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;
+}
+#MVP:active{cursor:grabbing}
+#MT{position:absolute;top:0;left:0;transform-origin:0 0;will-change:transform}
+canvas#STARS_BG{position:absolute;top:0;left:0;pointer-events:none}
+
+/* ─ SVG星座 ─ */
+#CONSTEL{position:absolute;top:0;left:0;overflow:visible}
+
+/* 星ボタン ─ SVGforeign object の代わりにHTMLレイヤーを使う */
+.star-node{
+  position:absolute;transform:translate(-50%,-50%);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;
+}
+/* 中央北極星 */
+.star-polaris .star-shape{
+  width:40px;height:40px;background:#fffbe8;
+  clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);
+  filter:drop-shadow(0 0 16px #fffbe8) drop-shadow(0 0 32px rgba(255,245,200,.6));
+  animation:twinkle-polaris 2.5s ease-in-out infinite;
+}
+@keyframes twinkle-polaris{
+  0%,100%{filter:drop-shadow(0 0 16px #fffbe8) drop-shadow(0 0 32px rgba(255,245,200,.6))}
+  50%{filter:drop-shadow(0 0 24px #fffbe8) drop-shadow(0 0 48px rgba(255,245,200,.9))}
+}
+/* URLスター */
+.star-url .star-shape{
+  width:28px;height:28px;
+  clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);
+  transition:filter .2s;
+}
+.star-url:active .star-shape{
+  filter:brightness(1.8) drop-shadow(0 0 12px currentColor)!important;
+  transform:scale(1.2);
+}
+/* 中間ハブ星 */
+.star-hub .star-shape{
+  width:18px;height:18px;
+  clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);
+  opacity:.5;
+}
+.star-label{
+  position:absolute;top:calc(100% + 5px);left:50%;transform:translateX(-50%);
+  white-space:nowrap;font-size:10px;color:rgba(232,213,163,.7);
+  letter-spacing:.5px;pointer-events:none;
+  text-shadow:0 0 8px rgba(0,0,8,1),0 0 16px rgba(0,0,8,.8);
+  max-width:90px;overflow:hidden;text-overflow:ellipsis;text-align:center;
+}
+.star-url:hover .star-label{color:rgba(232,213,163,1)}
+
+/* ─ インフォパネル ─ */
+#INFO_PANEL{
+  position:fixed;bottom:0;left:0;right:0;z-index:600;
+  background:rgba(4,6,20,.96);border:1px solid rgba(255,255,255,.1);
+  border-radius:16px 16px 0 0;
+  transform:translateY(100%);transition:transform .3s cubic-bezier(.22,1,.36,1);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  box-shadow:0 -8px 40px rgba(0,0,0,.8);
+  display:flex;flex-direction:column;
+}
+#INFO_PANEL.open{transform:translateY(0)}
+.ip-handle{display:flex;justify-content:center;padding:10px 0 4px;flex-shrink:0}
+.ip-hbar{width:36px;height:4px;background:rgba(255,255,255,.15);border-radius:2px}
+.ip-head{padding:4px 16px 14px;border-bottom:1px solid rgba(255,255,255,.07);flex-shrink:0;
+  display:flex;align-items:flex-start;gap:12px}
+/* 星アイコン（パネル） */
+.ip-star-ico{
+  width:32px;height:32px;flex-shrink:0;
+  clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);
+  margin-top:2px;
+}
+.ip-texts{flex:1;min-width:0}
+.ip-title{font-size:17px;font-weight:900;color:#e8d5a3;margin-bottom:4px;
+  line-height:1.3;text-shadow:0 0 16px rgba(232,213,163,.3)}
+.ip-creator{font-size:11px;color:var(--t2);letter-spacing:.3px}
+.ip-cls{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);
+  color:rgba(255,255,255,.5);width:30px;height:30px;border-radius:50%;
+  cursor:pointer;font-size:13px;font-family:inherit;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s}
+.ip-cls:active{background:rgba(255,255,255,.12)}
+.ip-body{padding:14px 16px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.ip-desc{font-size:13px;color:rgba(200,216,240,.7);line-height:1.7;
+  white-space:pre-wrap;word-break:break-all;margin-bottom:14px}
+.ip-usage{display:inline-flex;align-items:center;gap:5px;
+  padding:4px 12px;border-radius:12px;font-size:11px;
+  background:rgba(232,213,163,.07);border:1px solid rgba(232,213,163,.15);
+  color:rgba(232,213,163,.6);margin-bottom:16px}
+.ip-foot{padding:12px 16px;flex-shrink:0;
+  padding-bottom:max(12px,env(safe-area-inset-bottom,12px))}
+.ip-open-btn{
+  width:100%;padding:14px;border:none;border-radius:12px;
+  font-family:inherit;font-size:14px;font-weight:700;
+  letter-spacing:1px;cursor:pointer;transition:all .2s;
+  background:linear-gradient(135deg,#2a1f00,#5a4500,#2a1f00);
+  color:#e8d5a3;
+  border:1px solid rgba(232,213,163,.3);
+  box-shadow:0 4px 20px rgba(232,213,163,.12),inset 0 1px 0 rgba(255,255,255,.05);
+  position:relative;overflow:hidden;
+}
+.ip-open-btn::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,transparent,rgba(232,213,163,.08),transparent);
+  pointer-events:none;
+}
+.ip-open-btn:active{transform:scale(.97);box-shadow:0 2px 10px rgba(232,213,163,.08)}
+.ip-open-btn.no-url{background:rgba(30,45,69,.5);color:var(--t2);
+  border-color:var(--bd);box-shadow:none;cursor:default}
+.ip-open-btn.no-url::before{display:none}
+.ip-url-preview{font-size:10px;color:var(--t3);text-align:center;margin-top:7px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ─ GAS URL バナー ─ */
+#CFG{display:none;position:relative;z-index:2;
+  background:rgba(245,158,11,.1);border-bottom:1px solid rgba(245,158,11,.3);
+  padding:8px 12px;align-items:center;gap:8px;font-size:11px;color:var(--ay);flex-shrink:0}
+#CFG.on{display:flex}
+#CFG input{flex:1;background:rgba(0,0,0,.5);border:1px solid rgba(245,158,11,.3);
+  color:#fde68a;font-family:inherit;font-size:11px;padding:6px 10px;border-radius:6px;outline:none;min-width:0}
+#CFG button{background:rgba(245,158,11,.18);border:1px solid rgba(245,158,11,.35);
+  color:var(--ay);font-family:inherit;font-size:10px;padding:6px 10px;
+  border-radius:6px;cursor:pointer;white-space:nowrap;flex-shrink:0}
+</style>
+</head>
+<body>
+
+<div id="BG"></div>
+<div id="LOV" class="on"><div class="spin"></div><div class="ltxt">LOADING...</div></div>
+<div class="toast" id="TOAST"></div>
+
+<!-- Header -->
+<div class="hdr">
+  <button class="hbk" onclick="history.back()">← 戻る</button>
+  <div class="hdr-icon"></div>
+  <div class="hdr-texts">
+    <div class="hdr-title">民間システム</div>
+    <div class="hdr-sub">CIVILIAN SYSTEMS</div>
+  </div>
+  <div class="hdr-r">
+    <button class="hdr-btn" onclick="reloadData()">再読込</button>
+  </div>
+</div>
+
+<!-- GAS URL バナー -->
+<div id="CFG" class="on">
+  <span style="flex-shrink:0;font-size:10px">GAS URL</span>
+  <input type="text" id="CFG_IN" placeholder="https://script.google.com/macros/s/.../exec">
+  <button onclick="saveUrl()">保存して読込</button>
+</div>
+
+<!-- 操作ヒント -->
+<div id="HINT">1本指でドラッグ移動 / 2本指でピンチズーム / 星をタップして詳細</div>
+
+<!-- マップビューポート -->
+<div id="MVP">
+  <div id="MT">
+    <!-- 静的な小さい星（装飾）-->
+    <canvas id="STARS_BG" width="3000" height="3000"></canvas>
+    <!-- 星座SVG（線） -->
+    <svg id="CONSTEL" width="3000" height="3000"></svg>
+    <!-- 星ノード（HTMLレイヤー） -->
+    <div id="NODES"></div>
+  </div>
+</div>
+
+<!-- 情報パネル -->
+<div id="INFO_PANEL">
+  <div class="ip-handle"><div class="ip-hbar"></div></div>
+  <div class="ip-head">
+    <div class="ip-star-ico" id="IP_STAR_ICO"></div>
+    <div class="ip-texts">
+      <div class="ip-title"  id="IP_TITLE">--</div>
+      <div class="ip-creator" id="IP_CREATOR"></div>
+    </div>
+    <button class="ip-cls" onclick="closePanel()">X</button>
+  </div>
+  <div class="ip-body">
+    <div class="ip-desc" id="IP_DESC"></div>
+    <div class="ip-usage" id="IP_USAGE"></div>
+  </div>
+  <div class="ip-foot">
+    <button class="ip-open-btn" id="IP_OPEN" onclick="openLink()">
+      新しいタブで開く
+    </button>
+    <div class="ip-url-preview" id="IP_URL_PREVIEW"></div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════
+//  設定
+// ════════════════════════════════════════════════════
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbx8pWbuQ6646cJoxo5yU9RKouDB1anMyCjnP4COYcbcv1RqhsEckxtia6KXVXhME8c5/exec';
+
+var LS_URL = 'system_gas_url';
+
+// 星座の色パレット（各星の色）
+var STAR_COLORS = [
+  '#e8d5a3','#b8d4ff','#ffc8c8','#c8ffd4','#ffd4c8',
+  '#d4c8ff','#c8f0ff','#fff0c8','#ffc8e8','#c8ffc8'
+];
+
+// ════════════════════════════════════════════════════
+//  状態
+// ════════════════════════════════════════════════════
+var ITEMS     = [];
+var NODES_DAT = []; // {x,y,item,color,isPolaris,isHub}
+var LINES_DAT = []; // {x1,y1,x2,y2}
+var tfm = {x:0, y:0, s:1};
+var TC  = {n:0, sx:0,sy:0, ptx:0,pty:0, pd:0,ps:0, mx:0,my:0, moved:false};
+var MC  = {dn:false, sx:0,sy:0, ptx:0,pty:0, moved:false};
+var OPEN_ITEM = null;
+var WORLD_W   = 3000;
+var WORLD_H   = 3000;
+var CX        = WORLD_W / 2;
+var CY        = WORLD_H / 2;
+
+// ════════════════════════════════════════════════════
+//  起動
+// ════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', function(){
+  var sv = localStorage.getItem(LS_URL);
+  if(sv) GAS_URL = sv;
+  drawDecorStars();
+  if(!GAS_URL.trim()){
+    document.getElementById('CFG').classList.add('on');
+    hideLoading(); return;
+  }
+  document.getElementById('CFG').classList.remove('on');
+  loadData();
+});
+
+window.addEventListener('pageshow', function(e){
+  if(e.persisted) location.reload();
+});
+
+function saveUrl(){
+  var v=document.getElementById('CFG_IN').value.trim();
+  if(!v){toast('URLを入力してください','er');return;}
+  GAS_URL=v; localStorage.setItem(LS_URL,v);
+  document.getElementById('CFG').classList.remove('on');
+  loadData();
+}
+
+function reloadData(){ loadData(); }
+
+// ════════════════════════════════════════════════════
+//  データ取得
+// ════════════════════════════════════════════════════
+function loadData(){
+  showLoading();
+  fetch(GAS_URL + '?action=getSystems')
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      hideLoading();
+      if(!d||!d.success){ toast(d?d.error:'取得失敗','er'); return; }
+      ITEMS = d.items || [];
+      buildConstellation();
+      renderConstellation();
+      resetView();
+      setupTouch();
+    })
+    .catch(function(e){ hideLoading(); toast('通信エラー: '+e,'er'); });
+}
+
+// ════════════════════════════════════════════════════
+//  星座レイアウト生成
+// ════════════════════════════════════════════════════
+function buildConstellation(){
+  NODES_DAT = [];
+  LINES_DAT = [];
+
+  // 中央北極星
+  var polaris = {x:CX, y:CY, item:null, color:'#fffbe8', isPolaris:true, isHub:false};
+  NODES_DAT.push(polaris);
+
+  if(!ITEMS.length) return;
+
+  // 乱数シード固定（再描画で変わらないように）
+  var rng = seededRng(42);
+
+  // ツリー構築: BFS
+  // ルート (polaris) から子ノードを広げる
+  // 各ノードから 2〜3本の枝
+  var maxBranch = ITEMS.length <= 4 ? 2 : 3;
+  var baseLen   = Math.min(200, Math.max(120, 680 / Math.ceil(Math.sqrt(ITEMS.length+1))));
+
+  var queue = [{
+    node:     polaris,
+    depth:    0,
+    angleMin: -Math.PI,
+    angleMax:  Math.PI,
+    parentAngle: -Math.PI / 2
+  }];
+  var remaining = ITEMS.slice();
+
+  while(remaining.length > 0 && queue.length > 0){
+    var cur    = queue.shift();
+    var pNode  = cur.node;
+    var depth  = cur.depth;
+
+    // このノードから何本の枝を出すか
+    var branches = depth === 0
+      ? Math.min(remaining.length, maxBranch + 1) // ルートは少し多め
+      : Math.min(remaining.length, maxBranch);
+
+    // 枝ごとの角度を均等に分配し、少しランダムに揺らす
+    var spread   = Math.PI * 1.7 / Math.max(branches, 1);
+    var startAng = cur.parentAngle - spread * (branches - 1) / 2;
+
+    for(var i = 0; i < branches && remaining.length > 0; i++){
+      var item    = remaining.shift();
+      var baseAng = startAng + spread * i;
+      var jitter  = (rng() - 0.5) * spread * 0.35;
+      var ang     = baseAng + jitter;
+
+      // 深さによって長さを変化させる
+      var len     = baseLen * (1 - depth * 0.08) * (0.85 + rng() * 0.3);
+      len = Math.max(80, len);
+
+      var color   = STAR_COLORS[(NODES_DAT.length - 1) % STAR_COLORS.length];
+      var nx      = pNode.x + Math.cos(ang) * len;
+      var ny      = pNode.y + Math.sin(ang) * len;
+
+      // ワールド境界内に収める（マージン付き）
+      var margin  = 100;
+      nx = Math.max(margin, Math.min(WORLD_W - margin, nx));
+      ny = Math.max(margin, Math.min(WORLD_H - margin, ny));
+
+      var childNode = {
+        x: nx, y: ny, item: item, color: color,
+        isPolaris: false, isHub: false
+      };
+      NODES_DAT.push(childNode);
+      LINES_DAT.push({x1:pNode.x, y1:pNode.y, x2:nx, y2:ny, color: color});
+
+      // まだ残りアイテムがあれば、このノードも親になれる
+      if(remaining.length > 0){
+        queue.push({
+          node: childNode,
+          depth: depth + 1,
+          parentAngle: ang,
+          angleMin: -Math.PI, angleMax: Math.PI
+        });
+      }
+    }
+  }
+}
+
+// シード付き疑似乱数（再現性のため）
+function seededRng(seed){
+  var s = seed;
+  return function(){
+    s = (s * 9301 + 49297) % 233280;
+    return s / 233280;
+  };
+}
+
+// ════════════════════════════════════════════════════
+//  星座描画
+// ════════════════════════════════════════════════════
+function renderConstellation(){
+  var svg   = document.getElementById('CONSTEL');
+  var nodes = document.getElementById('NODES');
+  svg.innerHTML   = '';
+  nodes.innerHTML = '';
+
+  // ── 星座の線 ──
+  LINES_DAT.forEach(function(ln){
+    // メインライン
+    var line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', ln.x1); line.setAttribute('y1', ln.y1);
+    line.setAttribute('x2', ln.x2); line.setAttribute('y2', ln.y2);
+    line.setAttribute('stroke', hexAlpha(ln.color, 0.35));
+    line.setAttribute('stroke-width', '1.2');
+    line.setAttribute('stroke-linecap', 'round');
+    svg.appendChild(line);
+
+    // 光沢ライン（細い明るいもの）
+    var gline = document.createElementNS('http://www.w3.org/2000/svg','line');
+    gline.setAttribute('x1', ln.x1); gline.setAttribute('y1', ln.y1);
+    gline.setAttribute('x2', ln.x2); gline.setAttribute('y2', ln.y2);
+    gline.setAttribute('stroke', hexAlpha(ln.color, 0.12));
+    gline.setAttribute('stroke-width', '4');
+    gline.setAttribute('stroke-linecap', 'round');
+    svg.insertBefore(gline, svg.firstChild);
+  });
+
+  // ── 星ノード ──
+  NODES_DAT.forEach(function(nd, idx){
+    var div = document.createElement('div');
+    div.className = 'star-node ' + (nd.isPolaris ? 'star-polaris' : 'star-url');
+    div.style.left = nd.x + 'px';
+    div.style.top  = nd.y + 'px';
+
+    // 星型シェイプ
+    var shape = document.createElement('div');
+    shape.className = 'star-shape';
+
+    if(nd.isPolaris){
+      // 北極星：白く大きく
+      shape.style.background = '#fffbe8';
+      shape.style.filter = 'drop-shadow(0 0 16px #fffbe8)';
+    } else {
+      // URLスター：国のカラー系で
+      shape.style.background = nd.color;
+      var glowColor = nd.color;
+      shape.style.filter =
+        'drop-shadow(0 0 8px '+glowColor+') drop-shadow(0 0 18px '+hexAlpha(glowColor,0.4)+')';
+      // アニメーション（少しずつずらす）
+      var delay = (idx * 0.37) % 3;
+      shape.style.animation = 'twinkle-' + (idx % 4) + ' '+(2.2 + (idx%5)*0.4)+'s ease-in-out '+delay+'s infinite';
+
+      // ラベル
+      var lbl = document.createElement('div');
+      lbl.className = 'star-label';
+      lbl.textContent = nd.item ? nd.item.title : '';
+      div.appendChild(lbl);
+
+      // タップ
+      if(nd.item){
+        (function(item, color){
+          div.addEventListener('click', function(){ openInfo(item, color); });
+        })(nd.item, nd.color);
+      }
+    }
+
+    div.appendChild(shape);
+    nodes.appendChild(div);
+  });
+
+  // アニメーションキーフレームを注入
+  injectTwinkleKeyframes();
+}
+
+function injectTwinkleKeyframes(){
+  var id = 'twinkle-kf';
+  if(document.getElementById(id)) return;
+  var style = document.createElement('style');
+  style.id  = id;
+  var kf = '';
+  for(var i=0;i<4;i++){
+    var bright = 1.0 + i*0.15;
+    kf += '@keyframes twinkle-'+i+'{';
+    kf +=   '0%,100%{opacity:'+( 0.75+i*0.06 )+';transform:scale(1)}';
+    kf +=   '50%{opacity:1;transform:scale('+bright+')}';
+    kf += '}';
+  }
+  style.textContent = kf;
+  document.head.appendChild(style);
+}
+
+// ════════════════════════════════════════════════════
+//  背景の小さな星（装飾）
+// ════════════════════════════════════════════════════
+function drawDecorStars(){
+  var canvas = document.getElementById('STARS_BG');
+  canvas.width  = WORLD_W;
+  canvas.height = WORLD_H;
+  var ctx = canvas.getContext('2d');
+  var rng = seededRng(999);
+  for(var i=0;i<400;i++){
+    var x    = rng() * WORLD_W;
+    var y    = rng() * WORLD_H;
+    var r    = rng() * 1.2 + 0.2;
+    var a    = rng() * 0.6 + 0.1;
+    ctx.beginPath();
+    ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fillStyle = 'rgba(232,213,163,'+a.toFixed(2)+')';
+    ctx.fill();
+  }
+}
+
+// ════════════════════════════════════════════════════
+//  タッチ / マウス インタラクション
+// ════════════════════════════════════════════════════
+function setupTouch(){
+  var vp = document.getElementById('MVP');
+  vp.addEventListener('touchstart',  onTS, {passive:false});
+  vp.addEventListener('touchmove',   onTM, {passive:false});
+  vp.addEventListener('touchend',    onTE, {passive:false});
+  vp.addEventListener('touchcancel', function(){TC.n=0;},{passive:false});
+  vp.addEventListener('mousedown',  onMD);
+  vp.addEventListener('mousemove',  onMV);
+  vp.addEventListener('mouseup',    onMU);
+  vp.addEventListener('mouseleave', function(){MC.dn=false;});
+  vp.addEventListener('wheel',      onWH,{passive:false});
+}
+function onTS(e){
+  e.preventDefault(); TC.moved=false; TC.n=e.touches.length;
+  if(TC.n===1){
+    TC.sx=e.touches[0].clientX;TC.sy=e.touches[0].clientY;TC.ptx=tfm.x;TC.pty=tfm.y;
+  } else if(TC.n>=2){
+    TC.pd=pdist(e.touches);TC.ps=tfm.s;TC.ptx=tfm.x;TC.pty=tfm.y;
+    TC.mx=(e.touches[0].clientX+e.touches[1].clientX)/2;
+    TC.my=(e.touches[0].clientY+e.touches[1].clientY)/2;
+    TC.moved=true;
+  }
+}
+function onTM(e){
+  e.preventDefault();
+  if(TC.n===1&&e.touches.length===1){
+    var dx=e.touches[0].clientX-TC.sx,dy=e.touches[0].clientY-TC.sy;
+    if(Math.abs(dx)>6||Math.abs(dy)>6) TC.moved=true;
+    if(TC.moved){tfm.x=TC.ptx+dx;tfm.y=TC.pty+dy;applyTfm();}
+  } else if(e.touches.length>=2){
+    var d=pdist(e.touches),ns=clamp(TC.ps*(d/TC.pd),0.08,5),r=ns/TC.ps;
+    tfm.x=TC.mx+r*(TC.ptx-TC.mx);tfm.y=TC.my+r*(TC.pty-TC.my);tfm.s=ns;applyTfm();
+  }
+}
+function onTE(e){
+  if(!TC.moved&&TC.n===1){
+    // パネル外タップで閉じる
+    if(OPEN_ITEM && !e.target.closest('#INFO_PANEL') && !e.target.closest('.star-url')){
+      closePanel();
+    }
+  }
+  TC.n=e.touches.length;
+}
+function onMD(e){if(e.button!==0)return;MC.dn=true;MC.sx=e.clientX;MC.sy=e.clientY;MC.ptx=tfm.x;MC.pty=tfm.y;MC.moved=false;}
+function onMV(e){if(!MC.dn)return;var dx=e.clientX-MC.sx,dy=e.clientY-MC.sy;if(Math.abs(dx)>5||Math.abs(dy)>5)MC.moved=true;if(MC.moved){tfm.x=MC.ptx+dx;tfm.y=MC.pty+dy;applyTfm();}}
+function onMU(e){if(!MC.moved&&OPEN_ITEM&&!e.target.closest('#INFO_PANEL')&&!e.target.closest('.star-url'))closePanel();MC.dn=false;}
+function onWH(e){
+  e.preventDefault();
+  var f=e.deltaY>0?.88:1.14,ns=clamp(tfm.s*f,0.08,5),r=ns/tfm.s;
+  tfm.x=e.clientX+r*(tfm.x-e.clientX);tfm.y=e.clientY+r*(tfm.y-e.clientY);tfm.s=ns;applyTfm();
+}
+function applyTfm(){
+  document.getElementById('MT').style.transform='translate('+tfm.x+'px,'+tfm.y+'px) scale('+tfm.s+')';
+}
+function pdist(ts){var dx=ts[0].clientX-ts[1].clientX,dy=ts[0].clientY-ts[1].clientY;return Math.sqrt(dx*dx+dy*dy);}
+function resetView(){
+  var vp=document.getElementById('MVP');
+  tfm.s=Math.min(vp.clientWidth/(WORLD_W*0.7),vp.clientHeight/(WORLD_H*0.7));
+  tfm.s=clamp(tfm.s,0.1,1.0);
+  tfm.x=(vp.clientWidth -WORLD_W*tfm.s)/2;
+  tfm.y=(vp.clientHeight-WORLD_H*tfm.s)/2;
+  applyTfm();
+}
+
+// ════════════════════════════════════════════════════
+//  情報パネル
+// ════════════════════════════════════════════════════
+function openInfo(item, color){
+  OPEN_ITEM = item;
+
+  // 星アイコンの色
+  var ico=document.getElementById('IP_STAR_ICO');
+  ico.style.background=color;
+  ico.style.filter='drop-shadow(0 0 10px '+color+')';
+
+  document.getElementById('IP_TITLE').textContent   = item.title || '--';
+  document.getElementById('IP_CREATOR').textContent  =
+    item.creator ? '制作: ' + item.creator : '';
+  document.getElementById('IP_DESC').textContent    = item.desc  || '説明なし';
+
+  var usageEl = document.getElementById('IP_USAGE');
+  if(item.usage && item.usage !== ''){
+    usageEl.textContent = '利用回数: '+item.usage;
+    usageEl.style.display='inline-flex';
+  } else {
+    usageEl.style.display='none';
+  }
+
+  var openBtn = document.getElementById('IP_OPEN');
+  var urlPrev = document.getElementById('IP_URL_PREVIEW');
+  if(item.url && item.url.trim()){
+    openBtn.className='ip-open-btn';
+    openBtn.textContent='新しいタブで開く';
+    urlPrev.textContent=item.url.length>50?item.url.substring(0,50)+'…':item.url;
+  } else {
+    openBtn.className='ip-open-btn no-url';
+    openBtn.textContent='URLが登録されていません';
+    urlPrev.textContent='';
+  }
+
+  document.getElementById('INFO_PANEL').classList.add('open');
+}
+
+function closePanel(){
+  document.getElementById('INFO_PANEL').classList.remove('open');
+  OPEN_ITEM=null;
+}
+
+function openLink(){
+  if(!OPEN_ITEM||!OPEN_ITEM.url||!OPEN_ITEM.url.trim()){ toast('URLが登録されていません','er'); return; }
+  window.open(OPEN_ITEM.url.trim(), '_blank', 'noopener,noreferrer');
+}
+
+// ════════════════════════════════════════════════════
+//  ユーティリティ
+// ════════════════════════════════════════════════════
+function clamp(v,mn,mx){return Math.max(mn,Math.min(mx,v));}
+function hexAlpha(hex,a){
+  hex=(hex||'#ffffff').replace('#','');
+  if(hex.length===3)hex=hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+  var r=parseInt(hex.substr(0,2),16);
+  var g=parseInt(hex.substr(2,2),16);
+  var b=parseInt(hex.substr(4,2),16);
+  return 'rgba('+r+','+g+','+b+','+a+')';
+}
+function showLoading(){document.getElementById('LOV').classList.add('on');}
+function hideLoading(){document.getElementById('LOV').classList.remove('on');}
+var _tt;
+function toast(msg,type){
+  var el=document.getElementById('TOAST');el.textContent=msg;
+  el.className='toast on '+(type||'');
+  clearTimeout(_tt);_tt=setTimeout(function(){el.className='toast';},3500);
+}
+</script>
+</body>
+</html>
