@@ -304,7 +304,7 @@ var ITEMS     = [];
 var NODES_DAT = []; // {x,y,item,color,isPolaris,isHub}
 var LINES_DAT = []; // {x1,y1,x2,y2}
 var tfm = {x:0, y:0, s:1};
-var TC  = {n:0, sx:0,sy:0, ptx:0,pty:0, pd:0,ps:0, mx:0,my:0, moved:false};
+var TC  = {n:0, sx:0,sy:0, ptx:0,pty:0, pd:0,ps:0, mx:0,my:0, moved:false, pinching:false};
 var MC  = {dn:false, sx:0,sy:0, ptx:0,pty:0, moved:false};
 var OPEN_ITEM = null;
 var WORLD_W   = 3000;
@@ -514,12 +514,9 @@ function renderConstellation(){
       lbl.textContent = nd.item ? nd.item.title : '';
       div.appendChild(lbl);
 
-      // タップ
-      if(nd.item){
-        (function(item, color){
-          div.addEventListener('click', function(){ openInfo(item, color); });
-        })(nd.item, nd.color);
-      }
+      // タップ ─ click は使わず、touchend で座標から判定するため
+      // ノードインデックスをdata属性に記録しておく
+      div.dataset.nodeIdx = idx;
     }
 
     div.appendChild(shape);
@@ -576,47 +573,133 @@ function setupTouch(){
   vp.addEventListener('touchstart',  onTS, {passive:false});
   vp.addEventListener('touchmove',   onTM, {passive:false});
   vp.addEventListener('touchend',    onTE, {passive:false});
-  vp.addEventListener('touchcancel', function(){TC.n=0;},{passive:false});
+  vp.addEventListener('touchcancel', function(){TC.n=0; TC.pinching=false;},{passive:false});
   vp.addEventListener('mousedown',  onMD);
   vp.addEventListener('mousemove',  onMV);
   vp.addEventListener('mouseup',    onMU);
   vp.addEventListener('mouseleave', function(){MC.dn=false;});
   vp.addEventListener('wheel',      onWH,{passive:false});
 }
+
 function onTS(e){
-  e.preventDefault(); TC.moved=false; TC.n=e.touches.length;
-  if(TC.n===1){
-    TC.sx=e.touches[0].clientX;TC.sy=e.touches[0].clientY;TC.ptx=tfm.x;TC.pty=tfm.y;
-  } else if(TC.n>=2){
-    TC.pd=pdist(e.touches);TC.ps=tfm.s;TC.ptx=tfm.x;TC.pty=tfm.y;
-    TC.mx=(e.touches[0].clientX+e.touches[1].clientX)/2;
-    TC.my=(e.touches[0].clientY+e.touches[1].clientY)/2;
-    TC.moved=true;
+  e.preventDefault();
+  TC.moved = false;
+  TC.n = e.touches.length;
+
+  if(TC.n === 1){
+    // 1本指 パン開始
+    TC.pinching = false;
+    TC.sx  = e.touches[0].clientX;
+    TC.sy  = e.touches[0].clientY;
+    TC.ptx = tfm.x;
+    TC.pty = tfm.y;
+  } else if(TC.n >= 2){
+    // 2本指 ピンチ開始
+    // ★ 必ず現在のtfmスナップショットを保存する
+    TC.pinching = true;
+    TC.pd  = pdist(e.touches);
+    TC.ps  = tfm.s;
+    TC.ptx = tfm.x;
+    TC.pty = tfm.y;
+    // 初期中点（ズームの基準点として使う）
+    TC.mx  = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+    TC.my  = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+    TC.moved = true; // ピンチはタップ判定しない
   }
 }
+
 function onTM(e){
   e.preventDefault();
-  if(TC.n===1&&e.touches.length===1){
-    var dx=e.touches[0].clientX-TC.sx,dy=e.touches[0].clientY-TC.sy;
-    if(Math.abs(dx)>6||Math.abs(dy)>6) TC.moved=true;
-    if(TC.moved){tfm.x=TC.ptx+dx;tfm.y=TC.pty+dy;applyTfm();}
-  } else if(e.touches.length>=2){
-    var d=pdist(e.touches),ns=clamp(TC.ps*(d/TC.pd),0.08,5),r=ns/TC.ps;
-    tfm.x=TC.mx+r*(TC.ptx-TC.mx);tfm.y=TC.my+r*(TC.pty-TC.my);tfm.s=ns;applyTfm();
+
+  if(TC.n === 1 && e.touches.length === 1 && !TC.pinching){
+    // 1本指 パン
+    var dx = e.touches[0].clientX - TC.sx;
+    var dy = e.touches[0].clientY - TC.sy;
+    if(Math.abs(dx) > 5 || Math.abs(dy) > 5) TC.moved = true;
+    if(TC.moved){
+      tfm.x = TC.ptx + dx;
+      tfm.y = TC.pty + dy;
+      applyTfm();
+    }
+  } else if(e.touches.length >= 2){
+    // 2本指 ピンチ
+    // ★ 現在の中点を毎フレーム使うことでパン+ズーム同時に対応
+    var cmx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+    var cmy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+    var d   = pdist(e.touches);
+    var ns  = clamp(TC.ps * (d / TC.pd), 0.08, 5);
+    var r   = ns / TC.ps;
+    // 初期中点に対するズーム + 現在中点への並進
+    tfm.x = cmx + r * (TC.ptx - TC.mx);
+    tfm.y = cmy + r * (TC.pty - TC.my);
+    tfm.s = ns;
+    applyTfm();
   }
 }
+
 function onTE(e){
-  if(!TC.moved&&TC.n===1){
-    // パネル外タップで閉じる
-    if(OPEN_ITEM && !e.target.closest('#INFO_PANEL') && !e.target.closest('.star-url')){
+  var wasTap = (!TC.moved && TC.n === 1 && !TC.pinching);
+  TC.n = e.touches.length;
+  if(TC.n === 0) TC.pinching = false;
+
+  if(!wasTap) return;
+
+  // ── スマホタップ判定 ──
+  // e.preventDefault()でclickは発火しないため、ここでワールド座標ヒットテスト
+  var sx = TC.sx, sy = TC.sy; // タップしたスクリーン座標
+
+  // スクリーン座標 → ワールド座標
+  var wx = (sx - tfm.x) / tfm.s;
+  var wy = (sy - tfm.y) / tfm.s;
+
+  // 最も近い星ノードを探す（ヒット半径: ワールド座標で 40px）
+  var HIT_R = 40;
+  var hitNode = null;
+  var minDist = Infinity;
+  for(var i = 0; i < NODES_DAT.length; i++){
+    var nd = NODES_DAT[i];
+    if(nd.isPolaris || !nd.item) continue;
+    var dx = wx - nd.x, dy = wy - nd.y;
+    var dist = Math.sqrt(dx*dx + dy*dy);
+    if(dist < HIT_R && dist < minDist){
+      minDist = dist;
+      hitNode = nd;
+    }
+  }
+
+  if(hitNode){
+    openInfo(hitNode.item, hitNode.color);
+  } else {
+    // 星以外をタップ → パネルを閉じる
+    if(OPEN_ITEM && !e.target.closest('#INFO_PANEL')){
       closePanel();
     }
   }
-  TC.n=e.touches.length;
 }
+
 function onMD(e){if(e.button!==0)return;MC.dn=true;MC.sx=e.clientX;MC.sy=e.clientY;MC.ptx=tfm.x;MC.pty=tfm.y;MC.moved=false;}
-function onMV(e){if(!MC.dn)return;var dx=e.clientX-MC.sx,dy=e.clientY-MC.sy;if(Math.abs(dx)>5||Math.abs(dy)>5)MC.moved=true;if(MC.moved){tfm.x=MC.ptx+dx;tfm.y=MC.pty+dy;applyTfm();}}
-function onMU(e){if(!MC.moved&&OPEN_ITEM&&!e.target.closest('#INFO_PANEL')&&!e.target.closest('.star-url'))closePanel();MC.dn=false;}
+function onMV(e){
+  if(!MC.dn)return;
+  var dx=e.clientX-MC.sx,dy=e.clientY-MC.sy;
+  if(Math.abs(dx)>5||Math.abs(dy)>5)MC.moved=true;
+  if(MC.moved){tfm.x=MC.ptx+dx;tfm.y=MC.pty+dy;applyTfm();}
+}
+function onMU(e){
+  if(!MC.moved){
+    // マウスクリック: 星ヒットテスト
+    var wx=(e.clientX-tfm.x)/tfm.s, wy=(e.clientY-tfm.y)/tfm.s;
+    var HIT_R=40, hit=null, minD=Infinity;
+    for(var i=0;i<NODES_DAT.length;i++){
+      var nd=NODES_DAT[i];
+      if(nd.isPolaris||!nd.item)continue;
+      var dx=wx-nd.x,dy=wy-nd.y,dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist<HIT_R&&dist<minD){minD=dist;hit=nd;}
+    }
+    if(hit){ openInfo(hit.item,hit.color); }
+    else if(OPEN_ITEM&&!e.target.closest('#INFO_PANEL')){ closePanel(); }
+  }
+  MC.dn=false;
+}
 function onWH(e){
   e.preventDefault();
   var f=e.deltaY>0?.88:1.14,ns=clamp(tfm.s*f,0.08,5),r=ns/tfm.s;
@@ -634,6 +717,7 @@ function resetView(){
   tfm.y=(vp.clientHeight-WORLD_H*tfm.s)/2;
   applyTfm();
 }
+
 
 // ════════════════════════════════════════════════════
 //  情報パネル
