@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>政策 | 国家運営</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--s1:#0d1220;--s2:#121a2c;--s3:#1a2538;--s4:#1e2d40;
+  --bd:#1e2d45;--bd2:#152035;
+  --t1:#c8d8f0;--t2:#607898;--t3:#2e4260;
+  --ag:#10b981;--ar:#ef4444;--ay:#f59e0b;--ap:#a855f7;--ac:#3b82f6;
+  --uc:#3b82f6;--uc2:#1d4ed8;
+  --r:10px;--rl:14px;
+}
+html,body{min-height:100%;background:var(--bg);color:var(--t1);
+  font-family:'Hiragino Kaku Gothic ProN','Noto Sans JP','Courier New',monospace;
+  font-size:14px;overflow-x:hidden}
+
+/* ─ Loading / Toast ─ */
+#LOV{display:none;position:fixed;inset:0;z-index:3000;background:rgba(3,6,12,.9);
+  flex-direction:column;align-items:center;justify-content:center;gap:14px;backdrop-filter:blur(4px)}
+#LOV.on{display:flex}
+.spin{width:40px;height:40px;border:3px solid var(--bd);border-top-color:var(--uc);
+  border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ltxt{color:var(--t2);font-size:11px;letter-spacing:2px}
+.toast{position:fixed;bottom:22px;left:50%;
+  transform:translateX(-50%) translateY(20px);
+  background:rgba(13,18,32,.97);color:var(--t1);
+  padding:10px 20px;border-radius:22px;border:1px solid var(--bd);
+  font-size:12px;z-index:2500;opacity:0;pointer-events:none;
+  transition:all .3s cubic-bezier(.22,1,.36,1);
+  white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis;
+  backdrop-filter:blur(8px)}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.ok{border-color:var(--ag);color:var(--ag)}
+.toast.er{border-color:var(--ar);color:var(--ar)}
+.toast.wa{border-color:var(--ay);color:var(--ay)}
+
+/* ─ Header ─ */
+.hdr{
+  position:sticky;top:0;z-index:200;
+  background:rgba(7,9,15,.92);border-bottom:1px solid rgba(255,255,255,.07);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  height:52px;display:flex;align-items:center;gap:8px;padding:0 12px;
+  box-shadow:0 2px 16px rgba(0,0,0,.5);
+}
+.hbk{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+  color:var(--t1);border-radius:8px;padding:7px 11px;font-family:inherit;
+  font-size:12px;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:background .2s}
+.hbk:active{background:rgba(255,255,255,.12)}
+.hdr-flag{width:7px;height:30px;border-radius:3px;background:var(--uc);
+  box-shadow:0 0 10px var(--uc);flex-shrink:0}
+.hdr-info{flex:1;min-width:0}
+.hdr-sub{font-size:9px;color:var(--t3);letter-spacing:2px;text-transform:uppercase}
+.hdr-name{font-size:15px;font-weight:900;color:#fff;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gaikou-btn{background:linear-gradient(135deg,#1e3a8a,#3b82f6);border:1px solid rgba(59,130,246,.4);
+  color:#fff;border-radius:8px;padding:7px 12px;font-family:inherit;
+  font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;
+  box-shadow:0 2px 10px rgba(59,130,246,.25);letter-spacing:.5px;transition:all .2s}
+.gaikou-btn:active{transform:scale(.97)}
+
+/* ─ ページ本体 ─ */
+.page{padding:14px 12px 60px}
+
+/* ─ Section ─ */
+.sec{background:var(--s1);border:1px solid var(--bd);border-radius:var(--rl);
+  padding:14px;margin-bottom:14px;position:relative;overflow:hidden}
+.sec-title{font-size:9px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;
+  margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--bd)}
+
+/* ─ 収支ボックス ─ */
+.balance-main{text-align:center;margin-bottom:14px}
+.balance-label{font-size:10px;color:var(--t3);letter-spacing:2px;margin-bottom:6px}
+.balance-val{font-size:36px;font-weight:900;letter-spacing:-1px;line-height:1}
+.balance-val.pos{color:var(--ag)}
+.balance-val.neg{color:var(--ar)}
+.balance-val.zero{color:var(--t1)}
+.balance-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.bal-card{background:var(--s2);border:1px solid var(--bd2);border-radius:var(--r);
+  padding:10px 12px;text-align:center}
+.bal-card-lbl{font-size:9px;color:var(--t3);letter-spacing:1px;margin-bottom:4px}
+.bal-card-val{font-size:18px;font-weight:700}
+.bal-card.income .bal-card-val{color:var(--ag)}
+.bal-card.expend .bal-card-val{color:var(--ar)}
+
+/* ─ スライダー ─ */
+.slider-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.slider-val{font-size:24px;font-weight:900;color:var(--uc);min-width:70px;text-align:right;
+  letter-spacing:-.5px;line-height:1}
+.slider-val-unit{font-size:11px;color:var(--t3);margin-left:3px;font-weight:400}
+.slider-sub{font-size:10px;color:var(--t3);margin-bottom:10px}
+.srange{-webkit-appearance:none;appearance:none;width:100%;height:6px;
+  background:var(--s3);border-radius:3px;outline:none;cursor:pointer}
+.srange::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+  width:22px;height:22px;border-radius:50%;
+  background:linear-gradient(135deg,var(--uc),var(--uc2));
+  border:2px solid #fff;box-shadow:0 2px 8px rgba(59,130,246,.5);cursor:grab}
+.srange::-moz-range-thumb{width:22px;height:22px;border-radius:50%;
+  background:linear-gradient(135deg,var(--uc),var(--uc2));
+  border:2px solid #fff;box-shadow:0 2px 8px rgba(59,130,246,.5);cursor:grab}
+.srange::-webkit-slider-runnable-track{background:var(--s3);border-radius:3px;height:6px}
+.slider-ticks{display:flex;justify-content:space-between;margin-top:4px;
+  font-size:9px;color:var(--t3)}
+.save-btn{width:100%;padding:11px;margin-top:10px;
+  background:linear-gradient(135deg,var(--uc),var(--uc2));color:#fff;
+  border:none;border-radius:var(--r);font-family:inherit;font-size:12px;
+  font-weight:700;cursor:pointer;letter-spacing:1px;
+  box-shadow:0 4px 14px rgba(59,130,246,.25);transition:all .2s}
+.save-btn:active{transform:scale(.98)}
+.save-btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+
+/* ─ 投資ボックス ─ */
+.inv-grid{display:grid;grid-template-columns:1fr;gap:10px}
+.inv-box{background:var(--s2);border:1px solid var(--bd2);border-radius:var(--r);padding:12px}
+.inv-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px}
+.inv-title{font-size:12px;font-weight:700;color:var(--t1);letter-spacing:.3px}
+.inv-prev{font-size:10px;color:var(--t3)}
+.inv-prev strong{color:var(--t2);font-weight:700}
+.inv-input-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.inv-num{flex:1;background:var(--s3);border:1px solid var(--bd);color:var(--t1);
+  padding:9px 12px;border-radius:8px;font-family:inherit;font-size:16px;
+  font-weight:700;text-align:center;outline:none;transition:border-color .2s;
+  -moz-appearance:textfield}
+.inv-num::-webkit-outer-spin-button,.inv-num::-webkit-inner-spin-button{
+  -webkit-appearance:none;margin:0}
+.inv-num:focus{border-color:var(--uc)}
+.inv-ind-color .inv-num:focus{border-color:#f59e0b}
+.inv-mil-color .inv-num:focus{border-color:#ef4444}
+.inv-ind-color .srange::-webkit-slider-thumb,
+.inv-ind-color .srange::-moz-range-thumb{background:linear-gradient(135deg,#f59e0b,#b45309);box-shadow:0 2px 8px rgba(245,158,11,.5)}
+.inv-mil-color .srange::-webkit-slider-thumb,
+.inv-mil-color .srange::-moz-range-thumb{background:linear-gradient(135deg,#ef4444,#991b1b);box-shadow:0 2px 8px rgba(239,68,68,.5)}
+.inv-save-ind{background:linear-gradient(135deg,#f59e0b,#b45309);box-shadow:0 4px 14px rgba(245,158,11,.25)!important}
+.inv-save-mil{background:linear-gradient(135deg,#ef4444,#991b1b);box-shadow:0 4px 14px rgba(239,68,68,.25)!important}
+
+/* ─ チャート ─ */
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+@media(max-width:400px){.chart-grid{grid-template-columns:1fr}}
+.chart-box{background:var(--s2);border:1px solid var(--bd2);border-radius:var(--r);
+  padding:10px;overflow:hidden}
+.chart-box-title{font-size:10px;font-weight:700;color:var(--t2);letter-spacing:.5px;
+  text-align:center;margin-bottom:6px}
+.chart-box-total{font-size:14px;font-weight:900;color:var(--t1);text-align:center;margin-bottom:6px}
+.chart-box-total.inc{color:var(--ag)}
+.chart-box-total.exp{color:var(--ar)}
+.pie-wrap{position:relative;height:140px}
+.bar-box{background:var(--s2);border:1px solid var(--bd2);border-radius:var(--r);
+  padding:12px 10px 6px;overflow:hidden}
+.bar-wrap{position:relative;height:220px}
+
+/* ─ 国家総動員ボタン ─ */
+.mobilize-sec{
+  background:linear-gradient(135deg,#1a0f0f,#2a1414);
+  border:2px solid #5a1a1a;
+  position:relative;overflow:hidden;
+}
+.mobilize-sec::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(circle at 50% 0%,rgba(239,68,68,.15),transparent 60%);
+  pointer-events:none}
+.mob-title{font-size:11px;letter-spacing:4px;color:rgba(239,68,68,.7);
+  text-transform:uppercase;text-align:center;font-weight:900;margin-bottom:8px;
+  text-shadow:0 0 20px rgba(239,68,68,.3);position:relative;z-index:1}
+.mob-warn{font-size:10px;color:#c28080;text-align:center;margin-bottom:14px;line-height:1.6;
+  position:relative;z-index:1}
+.mob-btn{
+  width:100%;padding:18px;border-radius:var(--r);cursor:pointer;
+  font-family:inherit;font-size:16px;font-weight:900;letter-spacing:6px;
+  color:#ffd4d4;
+  background:
+    linear-gradient(180deg,rgba(239,68,68,.15) 0%,rgba(127,29,29,.35) 50%,rgba(69,10,10,.4) 100%),
+    repeating-linear-gradient(45deg,rgba(0,0,0,.1),rgba(0,0,0,.1) 4px,transparent 4px,transparent 8px);
+  border:3px solid;
+  border-color:#8b1a1a #5a1010 #2d0606 #5a1010;
+  box-shadow:
+    inset 0 2px 0 rgba(255,200,200,.15),
+    inset 0 -2px 0 rgba(0,0,0,.5),
+    inset 0 0 30px rgba(239,68,68,.2),
+    0 6px 20px rgba(0,0,0,.7),
+    0 0 40px rgba(239,68,68,.25);
+  text-shadow:0 2px 4px rgba(0,0,0,.9),0 0 12px rgba(239,68,68,.6);
+  position:relative;z-index:1;
+  transition:all .15s;
+  overflow:hidden;
+}
+.mob-btn::before{content:'';position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(255,255,255,.08),transparent 40%);
+  pointer-events:none}
+.mob-btn:active:not(:disabled){transform:translateY(2px);
+  box-shadow:inset 0 2px 0 rgba(255,200,200,.15),
+    inset 0 -2px 0 rgba(0,0,0,.5),
+    inset 0 0 30px rgba(239,68,68,.4),
+    0 3px 10px rgba(0,0,0,.8)}
+.mob-btn:disabled{
+  color:#7a5050;
+  cursor:not-allowed;
+  background:linear-gradient(180deg,rgba(100,100,100,.15),rgba(50,50,50,.3));
+  border-color:#4a3030 #332222 #1a1010 #332222;
+  box-shadow:inset 0 0 20px rgba(0,0,0,.5);
+  text-shadow:none}
+
+.mob-status{
+  text-align:center;padding:10px;margin-top:10px;border-radius:var(--r);
+  font-size:11px;font-weight:700;letter-spacing:1px;position:relative;z-index:1;
+}
+.mob-status.active{
+  background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);
+  color:var(--ar);text-shadow:0 0 10px rgba(239,68,68,.4);
+}
+.mob-status.inactive{
+  background:rgba(96,120,152,.08);border:1px solid var(--bd);color:var(--t2);
+}
+
+/* ─ 軍拡ボックス ─ */
+.army-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.army-stat-card{background:var(--s2);border:1px solid var(--bd2);border-radius:var(--r);
+  padding:10px;text-align:center}
+.army-stat-lbl{font-size:9px;color:var(--t3);letter-spacing:1px;margin-bottom:4px}
+.army-stat-val{font-size:20px;font-weight:900;color:var(--t1);line-height:1}
+.army-stat-val.fill{color:var(--ay)}
+.army-stat-val .unit{font-size:11px;color:var(--t3);margin-left:2px;font-weight:400}
+
+.queue-box{background:var(--s2);border:1px solid var(--bd2);border-radius:var(--r);
+  padding:14px;margin-bottom:10px;text-align:center}
+.queue-lbl{font-size:10px;color:var(--t3);letter-spacing:1.5px;margin-bottom:8px;text-transform:uppercase}
+.queue-counter{display:flex;align-items:center;justify-content:center;gap:18px}
+.q-btn{width:46px;height:46px;border-radius:50%;border:none;cursor:pointer;
+  font-size:22px;font-family:inherit;font-weight:700;
+  display:flex;align-items:center;justify-content:center;transition:all .2s}
+.q-btn-m{background:rgba(239,68,68,.1);color:var(--ar);border:2px solid rgba(239,68,68,.22)}
+.q-btn-m:active:not(:disabled){background:rgba(239,68,68,.2)}
+.q-btn-p{background:rgba(16,185,129,.1);color:var(--ag);border:2px solid rgba(16,185,129,.22)}
+.q-btn-p:active:not(:disabled){background:rgba(16,185,129,.2)}
+.q-btn:disabled{opacity:.3;cursor:not-allowed}
+.q-val{font-size:36px;font-weight:900;color:var(--t1);min-width:54px;line-height:1}
+.q-hint{font-size:10px;color:var(--t3);text-align:center;margin-top:6px}
+
+.speed-card{background:var(--s2);border:1px solid var(--bd2);border-radius:var(--r);
+  padding:10px 14px;display:flex;align-items:center;justify-content:space-between}
+.speed-lbl{font-size:11px;color:var(--t2);letter-spacing:.5px}
+.speed-val{font-size:18px;font-weight:900;color:var(--uc)}
+.speed-val .unit{font-size:10px;color:var(--t3);margin-left:3px;font-weight:400}
+
+/* ─ GAS URLバナー ─ */
+#CFG{display:none;background:rgba(245,158,11,.1);border-bottom:1px solid rgba(245,158,11,.3);
+  padding:8px 12px;align-items:center;gap:8px;font-size:11px;color:var(--ay)}
+#CFG.on{display:flex}
+#CFG input{flex:1;background:rgba(0,0,0,.4);border:1px solid rgba(245,158,11,.3);
+  color:#fde68a;font-family:inherit;font-size:11px;padding:6px 10px;
+  border-radius:6px;outline:none;min-width:0}
+#CFG button{background:rgba(245,158,11,.18);border:1px solid rgba(245,158,11,.35);
+  color:var(--ay);font-family:inherit;font-size:10px;padding:6px 10px;
+  border-radius:6px;cursor:pointer;white-space:nowrap;flex-shrink:0}
+</style>
+</head>
+<body>
+
+<div id="LOV" class="on"><div class="spin"></div><div class="ltxt" id="LOV_TXT">読込中...</div></div>
+<div class="toast" id="TOAST"></div>
+
+<!-- Header -->
+<div class="hdr">
+  <button class="hbk" onclick="history.back()">← 戻る</button>
+  <div class="hdr-flag" id="H_FLAG"></div>
+  <div class="hdr-info">
+    <div class="hdr-sub">政策</div>
+    <div class="hdr-name" id="H_NAME">--</div>
+  </div>
+  <button class="gaikou-btn" onclick="location.href='Gaikou.html'">外交タブへ</button>
+</div>
+
+<!-- GAS URLバナー -->
+<div id="CFG">
+  <span style="flex-shrink:0;font-size:10px">GAS URL</span>
+  <input type="text" id="CFG_IN" placeholder="https://script.google.com/macros/s/.../exec">
+  <button onclick="saveUrl()">保存して読込</button>
+</div>
+
+<div class="page" id="PAGE" style="display:none">
+
+  <!-- ═══ 収支ボックス ═══ -->
+  <div class="sec">
+    <div class="sec-title">収支状況</div>
+    <div class="balance-main">
+      <div class="balance-label">収支</div>
+      <div class="balance-val" id="BAL_VAL">--</div>
+    </div>
+    <div class="balance-grid">
+      <div class="bal-card income">
+        <div class="bal-card-lbl">収入</div>
+        <div class="bal-card-val" id="INC_VAL">--</div>
+      </div>
+      <div class="bal-card expend">
+        <div class="bal-card-lbl">支出</div>
+        <div class="bal-card-val" id="EXP_VAL">--</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 税収スライダー ═══ -->
+  <div class="sec">
+    <div class="sec-title">税収</div>
+    <div class="slider-row">
+      <input type="range" class="srange" id="TAX_SLIDER" min="0" max="100" value="0" step="1">
+      <div class="slider-val"><span id="TAX_VAL">0</span><span class="slider-val-unit">%</span></div>
+    </div>
+    <div class="slider-ticks"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+    <button class="save-btn" id="TAX_SAVE" onclick="saveTax()">税収を更新</button>
+  </div>
+
+  <!-- ═══ 技術投資 ═══ -->
+  <div class="sec">
+    <div class="sec-title">技術投資</div>
+    <div class="inv-grid">
+      <!-- 産業 -->
+      <div class="inv-box inv-ind-color">
+        <div class="inv-head">
+          <div class="inv-title" style="color:#f59e0b">産業技術開発</div>
+          <div class="inv-prev">前回: <strong id="IND_PREV">0</strong></div>
+        </div>
+        <div class="inv-input-row">
+          <input type="number" class="inv-num" id="IND_NUM" min="1" max="1000" value="1">
+        </div>
+        <input type="range" class="srange" id="IND_SLIDER" min="1" max="1000" value="1" step="1">
+        <div class="slider-ticks"><span>1</span><span>500</span><span>1000</span></div>
+        <button class="save-btn inv-save-ind" id="IND_SAVE" onclick="saveInvest('industry')">産業投資を更新</button>
+      </div>
+      <!-- 軍事 -->
+      <div class="inv-box inv-mil-color">
+        <div class="inv-head">
+          <div class="inv-title" style="color:#ef4444">軍事技術開発</div>
+          <div class="inv-prev">前回: <strong id="MIL_PREV">0</strong></div>
+        </div>
+        <div class="inv-input-row">
+          <input type="number" class="inv-num" id="MIL_NUM" min="1" max="1000" value="1">
+        </div>
+        <input type="range" class="srange" id="MIL_SLIDER" min="1" max="1000" value="1" step="1">
+        <div class="slider-ticks"><span>1</span><span>500</span><span>1000</span></div>
+        <button class="save-btn inv-save-mil" id="MIL_SAVE" onclick="saveInvest('military')">軍事投資を更新</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 円グラフ：内訳 ═══ -->
+  <div class="sec">
+    <div class="sec-title">収入・支出の内訳</div>
+    <div class="chart-grid">
+      <div class="chart-box">
+        <div class="chart-box-title">収入内訳</div>
+        <div class="chart-box-total inc" id="PIE_INC_TOT">0</div>
+        <div class="pie-wrap"><canvas id="PIE_INC"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-box-title">支出内訳</div>
+        <div class="chart-box-total exp" id="PIE_EXP_TOT">0</div>
+        <div class="pie-wrap"><canvas id="PIE_EXP"></canvas></div>
+      </div>
+    </div>
+    <!-- 積み上げ棒グラフ -->
+    <div class="bar-box">
+      <div class="chart-box-title">収支バランス（積み上げ）</div>
+      <div class="bar-wrap"><canvas id="BAR_CHART"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ═══ 国家総動員 ═══ -->
+  <div class="sec mobilize-sec">
+    <div class="mob-title">国家総動員</div>
+    <div class="mob-warn">発令後は取り消せません<br>慎重に選択してください</div>
+    <button class="mob-btn" id="MOB_BTN" onclick="doMobilize()">総動員発令</button>
+    <div class="mob-status" id="MOB_STATUS">--</div>
+  </div>
+
+  <!-- ═══ 軍拡 ═══ -->
+  <div class="sec">
+    <div class="sec-title">軍拡</div>
+    <div class="army-stats">
+      <div class="army-stat-card">
+        <div class="army-stat-lbl">軍隊量</div>
+        <div class="army-stat-val"><span id="ARMY_AMT">0</span></div>
+      </div>
+      <div class="army-stat-card">
+        <div class="army-stat-lbl">充足率</div>
+        <div class="army-stat-val fill"><span id="ARMY_FILL">0</span><span class="unit">%</span></div>
+      </div>
+    </div>
+
+    <div class="queue-box">
+      <div class="queue-lbl">軍拡キュー</div>
+      <div class="queue-counter">
+        <button class="q-btn q-btn-m" id="Q_MINUS" onclick="adjQueue(-1)">-</button>
+        <div class="q-val" id="Q_VAL">0</div>
+        <button class="q-btn q-btn-p" onclick="adjQueue(1)">+</button>
+      </div>
+      <div class="q-hint">現在保留中の軍拡数</div>
+    </div>
+
+    <div class="speed-card">
+      <span class="speed-lbl">軍拡速度</span>
+      <span class="speed-val"><span id="ARMY_SPD">0</span><span class="unit">/日</span></span>
+    </div>
+
+    <button class="save-btn" id="Q_SAVE" onclick="saveQueue()" style="margin-top:12px">軍拡キューを更新</button>
+  </div>
+
+</div>
+
+<script>
+// ════════════════════════════════════════════════════
+//  設定
+// ════════════════════════════════════════════════════
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbwBKhH2KJPwBcbIoicxnGqjipjFuk_U-4VHuxM2ug7gmnqpAeTIrDbiFjhchgh394JX/exec';
+var LS_URL  = 'action_gas_url';
+var LS_SES  = 'home_session';
+
+// Chart.js ダークモード
+Chart.defaults.color       = '#607898';
+Chart.defaults.borderColor = '#1e2d45';
+Chart.defaults.font.family = "'Hiragino Kaku Gothic ProN','Courier New',monospace";
+Chart.defaults.font.size   = 10;
+
+var SESSION   = null;
+var DATA      = null;
+var CHARTS    = {};
+var queueVal  = 0;
+
+// カラーパレット
+var PIE_INCOME_COLORS = ['#10b981','#059669','#047857','#065f46','#064e3b'];
+var PIE_EXPEND_COLORS = ['#ef4444','#dc2626','#b91c1c','#991b1b','#7f1d1d',
+                        '#f59e0b','#d97706','#b45309','#92400e','#78350f'];
+
+// ════════════════════════════════════════════════════
+//  起動
+// ════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', function(){
+  var sv=localStorage.getItem(LS_URL); if(sv) GAS_URL=sv;
+  try{var s=sessionStorage.getItem(LS_SES);if(s)SESSION=JSON.parse(s);}catch(e){}
+
+  if(!SESSION){
+    hideLoading();
+    toast('home.htmlからログインしてください','er');
+    setTimeout(function(){location.href='home.html';},2000);
+    return;
+  }
+
+  var c=SESSION.color||'#3b82f6';
+  document.getElementById('H_NAME').textContent=SESSION.country;
+  document.getElementById('H_FLAG').style.cssText='background:'+c+';box-shadow:0 0 10px '+c;
+  document.documentElement.style.setProperty('--uc',c);
+  document.documentElement.style.setProperty('--uc2',darken(c,.28));
+
+  if(!GAS_URL.trim()){
+    document.getElementById('CFG').classList.add('on');
+    hideLoading();
+    return;
+  }
+  loadData();
+});
+
+function saveUrl(){
+  var v=document.getElementById('CFG_IN').value.trim();
+  if(!v){toast('URLを入力してください','er');return;}
+  GAS_URL=v;localStorage.setItem(LS_URL,v);
+  document.getElementById('CFG').classList.remove('on');
+  loadData();
+}
+
+// ════════════════════════════════════════════════════
+//  データ取得
+// ════════════════════════════════════════════════════
+function loadData(){
+  showLoading('データ取得中...');
+  fetch(GAS_URL+'?action=getData&country='+encodeURIComponent(SESSION.country))
+    .then(function(r){return r.json();})
+    .then(function(d){
+      hideLoading();
+      if(!d||!d.success){toast(d?d.error:'取得失敗','er');return;}
+      DATA=d;
+      renderAll();
+    })
+    .catch(function(e){hideLoading();toast('通信エラー: '+e,'er');});
+}
+
+// ════════════════════════════════════════════════════
+//  全描画
+// ════════════════════════════════════════════════════
+function renderAll(){
+  document.getElementById('PAGE').style.display='block';
+
+  // ─ 収支 ─
+  renderBalance();
+
+  // ─ 税収スライダー ─
+  var taxSl = document.getElementById('TAX_SLIDER');
+  var taxVal= document.getElementById('TAX_VAL');
+  var tax   = Math.max(0, Math.min(100, Math.round(Number(DATA.tax)||0)));
+  taxSl.value=tax;
+  taxVal.textContent=tax;
+  taxSl.oninput=function(){ taxVal.textContent=this.value; };
+
+  // ─ 投資 ─
+  var indNum=document.getElementById('IND_NUM');
+  var indSl =document.getElementById('IND_SLIDER');
+  var iv    =clampI(DATA.indInvest,1,1000);
+  indNum.value=iv; indSl.value=iv;
+  document.getElementById('IND_PREV').textContent=DATA.indPrev||0;
+  indNum.oninput=function(){ var v=clampI(this.value,1,1000); indSl.value=v; };
+  indSl.oninput =function(){ indNum.value=this.value; };
+
+  var milNum=document.getElementById('MIL_NUM');
+  var milSl =document.getElementById('MIL_SLIDER');
+  var mv    =clampI(DATA.milInvest,1,1000);
+  milNum.value=mv; milSl.value=mv;
+  document.getElementById('MIL_PREV').textContent=DATA.milPrev||0;
+  milNum.oninput=function(){ var v=clampI(this.value,1,1000); milSl.value=v; };
+  milSl.oninput =function(){ milNum.value=this.value; };
+
+  // ─ 円グラフ＆棒グラフ ─
+  renderPie();
+  renderBar();
+
+  // ─ 総動員 ─
+  var mobBtn=document.getElementById('MOB_BTN');
+  var mobSt =document.getElementById('MOB_STATUS');
+  if(DATA.mobilized===1){
+    mobBtn.disabled=true; mobBtn.textContent='発令済み';
+    mobSt.className='mob-status active';
+    mobSt.textContent='■ 国家総動員 発令中 ■';
+  } else {
+    mobBtn.disabled=false; mobBtn.textContent='総動員発令';
+    mobSt.className='mob-status inactive';
+    mobSt.textContent='未発令';
+  }
+
+  // ─ 軍拡 ─
+  document.getElementById('ARMY_AMT').textContent  =fmtNum(DATA.armyAmount||0);
+  document.getElementById('ARMY_FILL').textContent =Math.round((DATA.armyFill||0)*10)/10;
+  document.getElementById('ARMY_SPD').textContent  =DATA.armySpeed||0;
+  queueVal=Math.max(0,parseInt(DATA.armyQueue||0));
+  updateQueueUI();
+}
+
+// ════════════════════════════════════════════════════
+//  収支描画
+// ════════════════════════════════════════════════════
+function renderBalance(){
+  var bal=DATA.balance||0;
+  var el =document.getElementById('BAL_VAL');
+  el.textContent=(bal>0?'+':'')+fmtNum(bal);
+  el.className='balance-val '+(bal>0?'pos':bal<0?'neg':'zero');
+  document.getElementById('INC_VAL').textContent=fmtNum(DATA.income||0);
+  document.getElementById('EXP_VAL').textContent=fmtNum(DATA.expend||0);
+}
+
+// ════════════════════════════════════════════════════
+//  円グラフ
+// ════════════════════════════════════════════════════
+function renderPie(){
+  // ─ 収入 ─
+  var incLabels=DATA.incomeBreakHdr||[];
+  var incVals  =DATA.incomeBreak   ||[];
+  var incTot   =incVals.reduce(function(a,b){return a+b;},0);
+  document.getElementById('PIE_INC_TOT').textContent=fmtNum(incTot);
+  drawPie('PIE_INC', incLabels, incVals, PIE_INCOME_COLORS);
+
+  // ─ 支出 ─
+  var expLabels=DATA.expendBreakHdr||[];
+  var expVals  =DATA.expendBreak   ||[];
+  var expTot   =expVals.reduce(function(a,b){return a+b;},0);
+  document.getElementById('PIE_EXP_TOT').textContent=fmtNum(expTot);
+  drawPie('PIE_EXP', expLabels, expVals, PIE_EXPEND_COLORS);
+}
+
+function drawPie(id, labels, vals, colors){
+  var ctx=document.getElementById(id).getContext('2d');
+  if(CHARTS[id]) CHARTS[id].destroy();
+
+  // 0値の項目を除外（見やすさのため）
+  var fLabels=[], fVals=[], fColors=[];
+  for(var i=0;i<vals.length;i++){
+    if(vals[i]>0){
+      fLabels.push(labels[i]||('項目'+(i+1)));
+      fVals.push(vals[i]);
+      fColors.push(colors[i%colors.length]);
+    }
+  }
+
+  if(fVals.length===0){
+    // ダミーで全ゼロの場合
+    fLabels=['データなし']; fVals=[1]; fColors=['#1e2d45'];
+  }
+
+  CHARTS[id]=new Chart(ctx,{
+    type:'doughnut',
+    data:{ labels:fLabels, datasets:[{
+      data:fVals,
+      backgroundColor:fColors,
+      borderColor:'#0d1220',
+      borderWidth:2
+    }]},
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      cutout:'55%',
+      plugins:{
+        legend:{
+          display:true,
+          position:'bottom',
+          labels:{
+            color:'#607898',
+            font:{size:9},
+            padding:6,
+            boxWidth:8,
+            boxHeight:8,
+            usePointStyle:true
+          }
+        },
+        tooltip:{
+          backgroundColor:'rgba(13,18,32,.95)',
+          borderColor:'#1e2d45',
+          borderWidth:1,
+          titleColor:'#c8d8f0',
+          bodyColor:'#c8d8f0',
+          padding:8,
+          cornerRadius:6,
+          callbacks:{
+            label:function(c){
+              var v=c.parsed||0;
+              var tot=c.dataset.data.reduce(function(a,b){return a+b;},0);
+              var pct=tot>0?Math.round(v/tot*1000)/10:0;
+              return ' '+c.label+': '+fmtNum(v)+' ('+pct+'%)';
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+// ════════════════════════════════════════════════════
+//  積み上げ棒グラフ
+// ════════════════════════════════════════════════════
+function renderBar(){
+  var ctx=document.getElementById('BAR_CHART').getContext('2d');
+  if(CHARTS.BAR) CHARTS.BAR.destroy();
+
+  var incLabels=DATA.incomeBreakHdr||[];
+  var incVals  =DATA.incomeBreak   ||[];
+  var expLabels=DATA.expendBreakHdr||[];
+  var expVals  =DATA.expendBreak   ||[];
+
+  // 2本の棒（収入・支出）、datasetsは各項目ごと
+  // 収入側の各項目はlabels[0]='収入'のみで値を持ち、支出側は0
+  var datasets=[];
+
+  // 収入項目
+  incLabels.forEach(function(lbl, i){
+    if(!incVals[i]) return; // 0はスキップ
+    datasets.push({
+      label: (lbl||'収入項目'+(i+1)) + ' (収入)',
+      data:  [incVals[i], 0],
+      backgroundColor: PIE_INCOME_COLORS[i % PIE_INCOME_COLORS.length],
+      borderColor:'#0d1220',
+      borderWidth:1,
+      stack:'bar'
+    });
+  });
+  // 支出項目
+  expLabels.forEach(function(lbl, i){
+    if(!expVals[i]) return;
+    datasets.push({
+      label: (lbl||'支出項目'+(i+1)) + ' (支出)',
+      data:  [0, expVals[i]],
+      backgroundColor: PIE_EXPEND_COLORS[i % PIE_EXPEND_COLORS.length],
+      borderColor:'#0d1220',
+      borderWidth:1,
+      stack:'bar'
+    });
+  });
+
+  if(datasets.length===0){
+    datasets=[{label:'データなし',data:[1,1],backgroundColor:'#1e2d45',stack:'bar'}];
+  }
+
+  CHARTS.BAR=new Chart(ctx,{
+    type:'bar',
+    data:{ labels:['収入','支出'], datasets:datasets },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      indexAxis:'x',
+      plugins:{
+        legend:{display:false}, // 凡例多すぎるので非表示
+        tooltip:{
+          backgroundColor:'rgba(13,18,32,.95)',
+          borderColor:'#1e2d45',borderWidth:1,
+          titleColor:'#c8d8f0',bodyColor:'#c8d8f0',padding:8,cornerRadius:6,
+          filter:function(item){ return item.parsed.y > 0; },
+          callbacks:{
+            label:function(c){ return ' '+c.dataset.label+': '+fmtNum(c.parsed.y); }
+          }
+        }
+      },
+      scales:{
+        x:{ stacked:true, grid:{color:'rgba(30,45,69,.4)'},
+            ticks:{color:'#c8d8f0',font:{size:12,weight:'700'}} },
+        y:{ stacked:true, grid:{color:'rgba(30,45,69,.4)'},
+            ticks:{color:'#607898',callback:function(v){return fmtNum(v);}} }
+      }
+    }
+  });
+}
+
+// ════════════════════════════════════════════════════
+//  税収更新
+// ════════════════════════════════════════════════════
+function saveTax(){
+  var tax=parseInt(document.getElementById('TAX_SLIDER').value);
+  if(!confirm('税収を '+tax+'% に変更します。よろしいですか？')) return;
+  var btn=document.getElementById('TAX_SAVE');
+  btn.disabled=true; btn.textContent='送信中...';
+  showLoading('更新中...');
+  fetch(GAS_URL+'?action=setTax&country='+encodeURIComponent(SESSION.country)+'&tax='+tax)
+    .then(function(r){return r.json();})
+    .then(function(d){
+      hideLoading();btn.disabled=false;btn.textContent='税収を更新';
+      if(d&&d.success){toast('税収を更新しました','ok');}
+      else toast(d?d.error:'更新エラー','er');
+    })
+    .catch(function(e){hideLoading();btn.disabled=false;btn.textContent='税収を更新';toast('通信エラー','er');});
+}
+
+// ════════════════════════════════════════════════════
+//  投資更新
+// ════════════════════════════════════════════════════
+function saveInvest(type){
+  var num=type==='industry'?document.getElementById('IND_NUM'):document.getElementById('MIL_NUM');
+  var v=clampI(num.value,1,1000);
+  num.value=v;
+  var typeLbl=type==='industry'?'産業技術開発':'軍事技術開発';
+  if(!confirm(typeLbl+'への投資を '+v+' に変更します。よろしいですか？')) return;
+  var btnId=type==='industry'?'IND_SAVE':'MIL_SAVE';
+  var btn=document.getElementById(btnId);
+  var origTxt=btn.textContent;
+  btn.disabled=true; btn.textContent='送信中...';
+  showLoading('更新中...');
+  fetch(GAS_URL+'?action=setInvestment&country='+encodeURIComponent(SESSION.country)+
+    '&type='+encodeURIComponent(type)+'&amount='+v)
+    .then(function(r){return r.json();})
+    .then(function(d){
+      hideLoading();btn.disabled=false;btn.textContent=origTxt;
+      if(d&&d.success){toast(typeLbl+'への投資を更新しました','ok');}
+      else toast(d?d.error:'更新エラー','er');
+    })
+    .catch(function(e){hideLoading();btn.disabled=false;btn.textContent=origTxt;toast('通信エラー','er');});
+}
+
+// ════════════════════════════════════════════════════
+//  国家総動員
+// ════════════════════════════════════════════════════
+function doMobilize(){
+  if(DATA&&DATA.mobilized===1){ toast('すでに発令済みです','wa'); return; }
+  // 2段階確認
+  if(!confirm('【重要】国家総動員を発令します。\n\nこの選択は取り消せません。\n本当に発令しますか？')) return;
+  if(!confirm('【最終確認】\n本当に実行しますか？')) return;
+  var btn=document.getElementById('MOB_BTN');
+  btn.disabled=true; btn.textContent='発令中...';
+  showLoading('発令中...');
+  fetch(GAS_URL+'?action=mobilize&country='+encodeURIComponent(SESSION.country))
+    .then(function(r){return r.json();})
+    .then(function(d){
+      hideLoading();
+      if(d&&d.success){
+        toast('国家総動員を発令しました','ok');
+        DATA.mobilized=1;
+        // UI更新
+        btn.disabled=true; btn.textContent='発令済み';
+        var mobSt=document.getElementById('MOB_STATUS');
+        mobSt.className='mob-status active';
+        mobSt.textContent='■ 国家総動員 発令中 ■';
+      } else {
+        btn.disabled=false; btn.textContent='総動員発令';
+        toast(d?d.error:'発令エラー','er');
+      }
+    })
+    .catch(function(e){hideLoading();btn.disabled=false;btn.textContent='総動員発令';toast('通信エラー','er');});
+}
+
+// ════════════════════════════════════════════════════
+//  軍拡キュー
+// ════════════════════════════════════════════════════
+function adjQueue(delta){
+  queueVal=Math.max(0, queueVal+delta);
+  updateQueueUI();
+}
+function updateQueueUI(){
+  document.getElementById('Q_VAL').textContent=queueVal;
+  document.getElementById('Q_MINUS').disabled=queueVal<=0;
+}
+function saveQueue(){
+  if(!confirm('軍拡キューを '+queueVal+' に変更します。よろしいですか？')) return;
+  var btn=document.getElementById('Q_SAVE');
+  btn.disabled=true; btn.textContent='送信中...';
+  showLoading('更新中...');
+  fetch(GAS_URL+'?action=setQueue&country='+encodeURIComponent(SESSION.country)+'&queue='+queueVal)
+    .then(function(r){return r.json();})
+    .then(function(d){
+      hideLoading();btn.disabled=false;btn.textContent='軍拡キューを更新';
+      if(d&&d.success){toast('軍拡キューを更新しました','ok');DATA.armyQueue=queueVal;}
+      else toast(d?d.error:'更新エラー','er');
+    })
+    .catch(function(e){hideLoading();btn.disabled=false;btn.textContent='軍拡キューを更新';toast('通信エラー','er');});
+}
+
+// ════════════════════════════════════════════════════
+//  ユーティリティ
+// ════════════════════════════════════════════════════
+function clampI(v,mn,mx){var n=parseInt(v);if(isNaN(n))n=mn;return Math.max(mn,Math.min(mx,n));}
+function fmtNum(n){
+  n=Number(n)||0;
+  if(Math.abs(n)>=10000){
+    return (Math.round(n/100)/100).toLocaleString()+'万';
+  }
+  if(n%1!==0) return (Math.round(n*10)/10).toLocaleString();
+  return n.toLocaleString();
+}
+function darken(hex,a){
+  hex=(hex||'#3b82f6').replace('#','');
+  if(hex.length===3)hex=hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+  var r=Math.max(0,Math.round(parseInt(hex.substr(0,2),16)*(1-a)));
+  var g=Math.max(0,Math.round(parseInt(hex.substr(2,2),16)*(1-a)));
+  var b=Math.max(0,Math.round(parseInt(hex.substr(4,2),16)*(1-a)));
+  return '#'+(r<16?'0':'')+r.toString(16)+(g<16?'0':'')+g.toString(16)+(b<16?'0':'')+b.toString(16);
+}
+function showLoading(t){document.getElementById('LOV_TXT').textContent=t||'読込中...';document.getElementById('LOV').classList.add('on');}
+function hideLoading(){document.getElementById('LOV').classList.remove('on');}
+var _tt;
+function toast(msg,type){
+  var el=document.getElementById('TOAST');
+  el.textContent=msg;el.className='toast on '+(type||'');
+  clearTimeout(_tt);_tt=setTimeout(function(){el.className='toast';},3500);
+}
+</script>
+</body>
+</html>
