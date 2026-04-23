@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>貿易 | 国家運営</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#05070c;--s1:#0b1120;--s2:#111827;--s3:#1a2438;
+  --bd:#1e2d45;--bd2:#152033;--bd3:#243348;
+  --t1:#e2e8f0;--t2:#94a3b8;--t3:#475569;--t4:#334155;
+  --ag:#22c55e;--ar:#ef4444;--ay:#eab308;--ap:#a855f7;
+  --ac:#3b82f6;--ao:#f97316;--acy:#06b6d4;
+  --uc:#3b82f6;--uc2:#1d4ed8;
+  --hdr:52px;
+}
+html,body{height:100%;overflow:hidden}
+body{display:flex;flex-direction:column;background:var(--bg);color:var(--t1);
+  font-family:'Hiragino Kaku Gothic ProN','Noto Sans JP','system-ui',sans-serif;font-size:14px;
+  -webkit-font-smoothing:antialiased}
+
+/* Loading / Toast */
+#LOV{display:none;position:fixed;inset:0;z-index:3000;background:rgba(3,5,10,.92);
+  flex-direction:column;align-items:center;justify-content:center;gap:14px;backdrop-filter:blur(6px)}
+#LOV.on{display:flex}
+.spin{width:40px;height:40px;border:3px solid var(--bd);border-top-color:var(--uc);
+  border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ltxt{color:var(--t2);font-size:11px;letter-spacing:2px;font-weight:600}
+.toast{position:fixed;top:calc(var(--hdr)+10px);left:50%;
+  transform:translateX(-50%) translateY(-20px);
+  background:rgba(11,17,32,.98);color:var(--t1);
+  padding:11px 22px;border-radius:24px;border:1px solid var(--bd);
+  font-size:12px;font-weight:600;z-index:2500;opacity:0;pointer-events:none;
+  transition:all .28s cubic-bezier(.22,1,.36,1);
+  white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis;
+  backdrop-filter:blur(10px);box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.ok{border-color:rgba(34,197,94,.5);color:var(--ag);background:rgba(20,83,45,.3)}
+.toast.er{border-color:rgba(239,68,68,.5);color:var(--ar);background:rgba(127,29,29,.3)}
+.toast.wa{border-color:rgba(234,179,8,.5);color:var(--ay);background:rgba(113,63,18,.3)}
+
+/* Header */
+.hdr{height:var(--hdr);flex-shrink:0;z-index:200;
+  background:rgba(5,7,12,.92);border-bottom:1px solid rgba(255,255,255,.06);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  display:flex;align-items:center;gap:10px;padding:0 14px;
+  box-shadow:0 2px 18px rgba(0,0,0,.5)}
+.hbk{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+  color:var(--t1);border-radius:9px;padding:8px 12px;font-family:inherit;
+  font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;
+  transition:all .15s}
+.hbk:active{background:rgba(255,255,255,.12);transform:scale(.97)}
+.hdr-flag{width:7px;height:30px;border-radius:3px;background:var(--uc);
+  box-shadow:0 0 10px var(--uc);flex-shrink:0}
+.hdr-info{flex:1;min-width:0}
+.hdr-sub{font-size:9px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;font-weight:700}
+.hdr-name{font-size:15px;font-weight:800;color:#fff;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hbtn{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+  color:var(--t2);border-radius:9px;padding:7px 10px;font-family:inherit;
+  font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+.hbtn:active{background:rgba(255,255,255,.1);transform:scale(.95)}
+
+/* タブバー (4タブ: メニュー/通知/送信履歴/交易路) */
+.tabs{flex-shrink:0;display:flex;background:rgba(10,14,24,.96);
+  border-bottom:1px solid rgba(255,255,255,.06);height:44px}
+.tab{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;
+  background:none;border:none;border-bottom:2px solid transparent;
+  color:var(--t3);font-family:inherit;font-size:11px;letter-spacing:.5px;font-weight:700;
+  cursor:pointer;transition:color .18s,border-color .18s;padding:0 4px}
+.tab.on{color:var(--uc);border-bottom-color:var(--uc)}
+.tab-bdg{display:inline-flex;align-items:center;justify-content:center;
+  min-width:16px;height:16px;padding:0 4px;border-radius:8px;
+  background:var(--ar);color:#fff;font-size:9px;font-weight:800}
+.tab-bdg:empty{display:none}
+
+/* 本体 */
+.body{flex:1;overflow:hidden;position:relative}
+.panel{display:none;height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:14px 12px 40px;scrollbar-width:thin;scrollbar-color:var(--bd) transparent}
+.panel.on{display:block}
+.panel::-webkit-scrollbar{width:3px}
+.panel::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px}
+
+/* メインメニューボタン */
+.menu-grid{display:flex;flex-direction:column;gap:10px}
+.menu-btn{
+  width:100%;padding:18px 16px;border:none;border-radius:14px;cursor:pointer;
+  font-family:inherit;font-size:14px;font-weight:800;letter-spacing:.5px;
+  color:#fff;text-align:left;position:relative;overflow:hidden;
+  display:flex;align-items:center;gap:14px;
+  transition:all .18s;
+  -webkit-tap-highlight-color:transparent;
+  box-shadow:0 4px 16px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.08);
+}
+.menu-btn:active{transform:scale(.98)}
+.menu-btn.send{background:linear-gradient(135deg,#16a34a,#15803d)}
+.menu-btn.request{background:linear-gradient(135deg,#eab308,#a16207)}
+.menu-btn.propose{background:linear-gradient(135deg,#0891b2,#0e7490)}
+.menu-ico{
+  width:48px;height:48px;border-radius:12px;flex-shrink:0;
+  background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.15);
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;font-weight:900;
+}
+.menu-txts{flex:1;min-width:0}
+.menu-main{font-size:15px;margin-bottom:3px}
+.menu-desc{font-size:11px;opacity:.85;font-weight:500;letter-spacing:0}
+
+/* セクションタイトル */
+.sec-tit{font-size:10px;color:var(--t3);letter-spacing:2.5px;text-transform:uppercase;
+  font-weight:700;margin:18px 4px 10px;display:flex;align-items:center;gap:10px}
+.sec-tit::after{content:'';flex:1;height:1px;background:var(--bd)}
+.sec-tit:first-child{margin-top:0}
+
+/* メッセージリスト */
+.empty-block{padding:48px 20px;text-align:center;color:var(--t3);font-size:12px;font-weight:500}
+.mail-card{background:var(--s1);border:1px solid var(--bd2);border-radius:12px;
+  padding:0;margin-bottom:8px;overflow:hidden;display:flex;position:relative;
+  cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent}
+.mail-card:active{background:var(--s2)}
+.mc-line{width:4px;flex-shrink:0}
+.mc-line.transfer {background:#16a34a}
+.mc-line.request  {background:#eab308}
+.mc-line.build    {background:#0891b2}
+.mc-line.close    {background:#dc2626}
+.mc-line.change   {background:#a855f7}
+.mc-content{flex:1;min-width:0;padding:10px 13px}
+.mc-top{display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap}
+.mc-tag{font-size:9px;font-weight:800;padding:2px 7px;border-radius:6px;
+  letter-spacing:.5px;white-space:nowrap;flex-shrink:0}
+.mc-tag.transfer{background:rgba(34,197,94,.1);color:var(--ag);border:1px solid rgba(34,197,94,.3)}
+.mc-tag.request {background:rgba(234,179,8,.1);color:var(--ay);border:1px solid rgba(234,179,8,.3)}
+.mc-tag.build   {background:rgba(6,182,212,.1);color:var(--acy);border:1px solid rgba(6,182,212,.3)}
+.mc-tag.close   {background:rgba(239,68,68,.1);color:var(--ar);border:1px solid rgba(239,68,68,.3)}
+.mc-tag.change  {background:rgba(168,85,247,.1);color:var(--ap);border:1px solid rgba(168,85,247,.3)}
+.mc-state{font-size:9px;font-weight:800;padding:2px 7px;border-radius:6px;letter-spacing:.5px}
+.mc-state.p{background:rgba(251,191,36,.1);color:#fbbf24;border:1px solid rgba(251,191,36,.25)}
+.mc-state.a{background:rgba(34,197,94,.1);color:var(--ag);border:1px solid rgba(34,197,94,.25)}
+.mc-state.d{background:rgba(148,163,184,.08);color:var(--t2);border:1px solid rgba(148,163,184,.15)}
+.mc-from{font-size:12px;font-weight:700;color:var(--t1);flex-shrink:0}
+.mc-time{margin-left:auto;font-size:9px;color:var(--t3);font-weight:500}
+.mc-body{font-size:11px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* 交易路カード */
+.route-card{background:var(--s1);border:1px solid var(--bd2);border-radius:12px;
+  padding:12px 14px;margin-bottom:10px;position:relative;overflow:hidden}
+.route-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--acy)}
+.rc-hd{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.rc-country{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--t1)}
+.rc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.rc-arrow{color:var(--t3);font-size:14px;font-weight:700}
+.rc-port{font-size:10px;color:var(--t3);font-weight:600}
+.rc-flows{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.rc-side{padding:8px 10px;background:var(--s2);border:1px solid var(--bd2);border-radius:9px}
+.rc-side-h{font-size:9px;font-weight:700;color:var(--t3);letter-spacing:.5px;margin-bottom:6px;
+  padding-bottom:4px;border-bottom:1px solid var(--bd2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rc-item{display:flex;justify-content:space-between;font-size:10px;padding:1px 0}
+.rc-item-l{color:var(--t2)}
+.rc-item-v{font-weight:700;color:var(--t1)}
+.rc-item-v.pos{color:var(--ag)}
+.rc-item-v.neg{color:var(--ar)}
+.rc-acts{display:flex;gap:6px}
+.rc-act{flex:1;padding:7px;border-radius:7px;border:1px solid;font-family:inherit;
+  font-size:10px;font-weight:700;cursor:pointer;transition:all .15s;
+  background:transparent;-webkit-tap-highlight-color:transparent}
+.rc-act.change{border-color:rgba(168,85,247,.3);color:var(--ap);background:rgba(168,85,247,.06)}
+.rc-act.change:active{background:rgba(168,85,247,.15)}
+.rc-act.close{border-color:rgba(239,68,68,.3);color:var(--ar);background:rgba(239,68,68,.06)}
+.rc-act.close:active{background:rgba(239,68,68,.15)}
+
+/* ═══ Modals ═══ */
+.mover{display:none;position:fixed;inset:0;z-index:900;background:rgba(3,5,12,.88);
+  align-items:flex-end;justify-content:center;backdrop-filter:blur(6px)}
+.mover.on{display:flex}
+.modal{background:var(--s1);border:1px solid var(--bd);border-bottom:none;
+  border-radius:18px 18px 0 0;width:100%;max-width:600px;max-height:92vh;
+  overflow:hidden;display:flex;flex-direction:column;
+  box-shadow:0 -12px 40px rgba(0,0,0,.75);animation:sup .3s cubic-bezier(.22,1,.36,1)}
+@keyframes sup{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.m-handle{display:flex;justify-content:center;padding:10px 0 4px;flex-shrink:0}
+.m-hbar{width:40px;height:4px;background:var(--bd);border-radius:2px}
+.m-header{padding:6px 18px 14px;border-bottom:1px solid var(--bd);
+  display:flex;align-items:center;gap:12px;flex-shrink:0}
+.m-ttl{font-size:16px;font-weight:800;color:var(--t1);flex:1}
+.m-cls{background:var(--s2);border:1px solid var(--bd);color:var(--t2);
+  width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:14px;
+  font-family:inherit;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  -webkit-tap-highlight-color:transparent;transition:all .15s}
+.m-cls:active{background:var(--s3);transform:scale(.95)}
+.m-body{flex:1;overflow-y:auto;padding:16px 18px 12px;-webkit-overflow-scrolling:touch}
+.m-foot{padding:12px 18px;border-top:1px solid var(--bd);flex-shrink:0;
+  padding-bottom:max(12px,env(safe-area-inset-bottom,12px))}
+
+/* Forms */
+.fl{display:block;font-size:9px;color:var(--t3);letter-spacing:1.5px;
+  text-transform:uppercase;font-weight:700;margin-bottom:6px;margin-top:12px}
+.fl:first-child{margin-top:0}
+.finp{width:100%;background:var(--s2);border:1px solid var(--bd);color:var(--t1);
+  padding:11px 14px;border-radius:10px;font-family:inherit;font-size:13px;outline:none;
+  transition:border-color .15s}
+.finp:focus{border-color:var(--uc);box-shadow:0 0 0 3px rgba(59,130,246,.08)}
+.finp::placeholder{color:var(--t3)}
+textarea.finp{resize:none;min-height:80px;line-height:1.6}
+.fsel-w{position:relative}
+.fsel{width:100%;background:var(--s2);border:1px solid var(--bd);color:var(--t1);
+  padding:11px 40px 11px 14px;border-radius:10px;font-family:inherit;font-size:13px;
+  outline:none;appearance:none;-webkit-appearance:none;cursor:pointer;transition:border-color .15s}
+.fsel:focus{border-color:var(--uc)}
+.fsel-arr{position:absolute;right:13px;top:50%;transform:translateY(-50%);
+  pointer-events:none;color:var(--t3);font-size:10px}
+.char-c{text-align:right;font-size:10px;color:var(--t3);margin-top:4px}
+
+.num-slider{width:100%;-webkit-appearance:none;appearance:none;height:6px;
+  background:var(--s3);border-radius:3px;outline:none;cursor:pointer}
+.num-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+  width:22px;height:22px;border-radius:50%;background:var(--uc);
+  border:2px solid #fff;cursor:grab;box-shadow:0 2px 8px rgba(59,130,246,.4)}
+.num-slider::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--uc);
+  border:2px solid #fff;cursor:grab;box-shadow:0 2px 8px rgba(59,130,246,.4)}
+.amount-big{font-size:32px;font-weight:900;color:var(--uc);text-align:center;
+  letter-spacing:-1px;margin:8px 0 14px}
+
+.sbtn{width:100%;padding:14px;border:none;border-radius:11px;font-family:inherit;
+  font-size:13px;font-weight:800;letter-spacing:1px;cursor:pointer;transition:all .2s;
+  -webkit-tap-highlight-color:transparent}
+.sbtn-ac{background:linear-gradient(135deg,var(--uc),var(--uc2));color:#fff;
+  box-shadow:0 4px 14px rgba(59,130,246,.3),inset 0 1px 0 rgba(255,255,255,.15)}
+.sbtn-ac:active{transform:scale(.98)}
+.sbtn-ac:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.sbtn-ok{background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;
+  box-shadow:0 4px 14px rgba(22,163,74,.3)}
+.sbtn-ng{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);color:var(--ar)}
+
+/* 提案方式選択 */
+.prop-choice{display:grid;grid-template-columns:1fr;gap:10px}
+.prop-opt{background:var(--s2);border:1.5px solid var(--bd2);border-radius:12px;
+  padding:14px;cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent;
+  display:flex;align-items:center;gap:12px}
+.prop-opt:active{transform:scale(.99)}
+.prop-opt:hover{border-color:var(--bd3)}
+.prop-opt-ico{width:40px;height:40px;border-radius:10px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#fff}
+.prop-opt.build .prop-opt-ico{background:linear-gradient(135deg,#0891b2,#0e7490)}
+.prop-opt.close .prop-opt-ico{background:linear-gradient(135deg,#dc2626,#991b1b)}
+.prop-opt.change .prop-opt-ico{background:linear-gradient(135deg,#9333ea,#7c3aed)}
+.prop-opt-t{flex:1;min-width:0}
+.prop-opt-n{font-size:13px;font-weight:800;color:var(--t1);margin-bottom:2px}
+.prop-opt-d{font-size:10px;color:var(--t3);letter-spacing:.2px}
+
+/* Resource Inputs Grid */
+.res-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.res-col{background:var(--s2);border:1px solid var(--bd2);border-radius:10px;padding:10px;overflow:hidden}
+.res-col-t{font-size:10px;font-weight:800;color:var(--t1);letter-spacing:.5px;
+  margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid var(--bd2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.res-row{display:flex;align-items:center;gap:6px;margin-bottom:5px}
+.res-row:last-child{margin-bottom:0}
+.res-lbl{font-size:9px;color:var(--t3);min-width:34px;flex-shrink:0;letter-spacing:.2px}
+.res-inp{flex:1;min-width:0;background:var(--s3);border:1px solid var(--bd);color:var(--t1);
+  padding:6px 8px;border-radius:6px;font-family:inherit;font-size:11px;font-weight:700;
+  outline:none;text-align:right;-moz-appearance:textfield}
+.res-inp::-webkit-outer-spin-button,.res-inp::-webkit-inner-spin-button{
+  -webkit-appearance:none;margin:0}
+.res-inp:focus{border-color:var(--uc)}
+
+.info-box{background:var(--s2);border:1px solid var(--bd2);border-radius:10px;
+  padding:10px 12px;font-size:12px;color:var(--t2);line-height:1.6;margin-bottom:10px}
+.info-box strong{color:var(--t1)}
+
+/* GAS URL */
+#CFG{display:none;background:rgba(245,158,11,.1);border-bottom:1px solid rgba(245,158,11,.3);
+  padding:8px 12px;align-items:center;gap:8px;font-size:11px;color:var(--ay);flex-shrink:0}
+#CFG.on{display:flex}
+#CFG input{flex:1;background:rgba(0,0,0,.4);border:1px solid rgba(245,158,11,.3);
+  color:#fde68a;font-family:inherit;font-size:11px;padding:6px 10px;border-radius:6px;outline:none;min-width:0}
+#CFG button{background:rgba(245,158,11,.18);border:1px solid rgba(245,158,11,.35);
+  color:var(--ay);font-family:inherit;font-size:10px;padding:6px 10px;
+  border-radius:6px;cursor:pointer;white-space:nowrap;flex-shrink:0}
+</style>
+</head>
+<body>
+
+<div id="LOV" class="on"><div class="spin"></div><div class="ltxt" id="LOV_TXT">読込中...</div></div>
+<div class="toast" id="TOAST"></div>
+
+<!-- Header -->
+<div class="hdr">
+  <button class="hbk" onclick="history.back()">← 戻る</button>
+  <div class="hdr-flag" id="H_FLAG"></div>
+  <div class="hdr-info">
+    <div class="hdr-sub">貿易</div>
+    <div class="hdr-name" id="H_NAME">--</div>
+  </div>
+  <button class="hbtn" onclick="reloadAll()">更新</button>
+</div>
+
+<!-- GAS URLバナー -->
+<div id="CFG">
+  <span style="flex-shrink:0;font-size:10px">GAS URL</span>
+  <input type="text" id="CFG_IN" placeholder="https://script.google.com/macros/s/.../exec">
+  <button onclick="saveUrl()">保存</button>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab on" id="TAB_M" onclick="setTab('menu')">メニュー</button>
+  <button class="tab" id="TAB_N" onclick="setTab('notif')">通知<span class="tab-bdg" id="NOTIF_BDG"></span></button>
+  <button class="tab" id="TAB_S" onclick="setTab('sent')">送信履歴</button>
+  <button class="tab" id="TAB_R" onclick="setTab('routes')">交易路</button>
+</div>
+
+<div class="body">
+  <!-- メニュー -->
+  <div class="panel on" id="P_MENU">
+    <div class="sec-tit">貿易操作</div>
+    <div class="menu-grid">
+      <button class="menu-btn send" onclick="openTransfer()">
+        <div class="menu-ico">¥</div>
+        <div class="menu-txts">
+          <div class="menu-main">送金</div>
+          <div class="menu-desc">他国に資本金を送る（上限2000）</div>
+        </div>
+      </button>
+      <button class="menu-btn request" onclick="openRequest()">
+        <div class="menu-ico">◈</div>
+        <div class="menu-txts">
+          <div class="menu-main">請求</div>
+          <div class="menu-desc">他国に資本金を請求する</div>
+        </div>
+      </button>
+      <button class="menu-btn propose" onclick="openProposeChoice()">
+        <div class="menu-ico">⇌</div>
+        <div class="menu-txts">
+          <div class="menu-main">交易路提案</div>
+          <div class="menu-desc">建設・封鎖・内容変更</div>
+        </div>
+      </button>
+    </div>
+  </div>
+
+  <!-- 通知 -->
+  <div class="panel" id="P_NOTIF">
+    <div class="sec-tit">受信した連絡</div>
+    <div id="NOTIF_LIST"></div>
+  </div>
+
+  <!-- 送信履歴 -->
+  <div class="panel" id="P_SENT">
+    <div class="sec-tit">送信履歴</div>
+    <div id="SENT_LIST"></div>
+  </div>
+
+  <!-- 交易路 -->
+  <div class="panel" id="P_ROUTES">
+    <div class="sec-tit">交易路一覧</div>
+    <div id="ROUTES_LIST"></div>
+  </div>
+</div>
+
+<!-- ═══ 送金モーダル ═══ -->
+<div class="mover" id="M_TRANSFER">
+  <div class="modal">
+    <div class="m-handle"><div class="m-hbar"></div></div>
+    <div class="m-header"><div class="m-ttl">送金</div>
+      <button class="m-cls" data-close="M_TRANSFER">✕</button></div>
+    <div class="m-body">
+      <label class="fl">送金先国家</label>
+      <div class="fsel-w">
+        <select class="fsel" id="T_TO">
+          <option value="">-- 選択 --</option>
+        </select>
+        <span class="fsel-arr">▼</span>
+      </div>
+      <label class="fl">送金額（1〜2000）</label>
+      <div class="amount-big"><span id="T_AMT_DISP">500</span></div>
+      <input type="range" class="num-slider" id="T_AMT" min="1" max="2000" value="500" step="1">
+    </div>
+    <div class="m-foot">
+      <button class="sbtn sbtn-ac" id="T_SEND" onclick="doTransfer()">送金する</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 請求モーダル ═══ -->
+<div class="mover" id="M_REQUEST">
+  <div class="modal">
+    <div class="m-handle"><div class="m-hbar"></div></div>
+    <div class="m-header"><div class="m-ttl">請求</div>
+      <button class="m-cls" data-close="M_REQUEST">✕</button></div>
+    <div class="m-body">
+      <label class="fl">請求先（支払う国家）</label>
+      <div class="fsel-w">
+        <select class="fsel" id="R_TO">
+          <option value="">-- 選択 --</option>
+        </select>
+        <span class="fsel-arr">▼</span>
+      </div>
+      <label class="fl">請求額（1〜2000）</label>
+      <div class="amount-big" style="color:var(--ay)"><span id="R_AMT_DISP">500</span></div>
+      <input type="range" class="num-slider" id="R_AMT" min="1" max="2000" value="500" step="1">
+      <label class="fl">理由（任意）</label>
+      <textarea class="finp" id="R_REASON" placeholder="請求理由を入力..." maxlength="200"></textarea>
+    </div>
+    <div class="m-foot">
+      <button class="sbtn sbtn-ac" id="R_SEND" onclick="doRequest()" style="background:linear-gradient(135deg,#eab308,#a16207)">請求を送る</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 提案選択モーダル ═══ -->
+<div class="mover" id="M_PROP_CHOICE">
+  <div class="modal">
+    <div class="m-handle"><div class="m-hbar"></div></div>
+    <div class="m-header"><div class="m-ttl">提案の種類を選択</div>
+      <button class="m-cls" data-close="M_PROP_CHOICE">✕</button></div>
+    <div class="m-body">
+      <div class="prop-choice">
+        <button class="prop-opt build" onclick="openPropBuild()">
+          <div class="prop-opt-ico">＋</div>
+          <div class="prop-opt-t"><div class="prop-opt-n">新たな交易路を建設</div>
+            <div class="prop-opt-d">自国と他国の港を繋ぐ</div></div>
+        </button>
+        <button class="prop-opt close" onclick="openPropClose()">
+          <div class="prop-opt-ico">✕</div>
+          <div class="prop-opt-t"><div class="prop-opt-n">交易路を封鎖</div>
+            <div class="prop-opt-d">既存の交易路を閉じる</div></div>
+        </button>
+        <button class="prop-opt change" onclick="openPropChange()">
+          <div class="prop-opt-ico">⇆</div>
+          <div class="prop-opt-t"><div class="prop-opt-n">交易内容を変更</div>
+            <div class="prop-opt-d">収支や資源のやり取りを変更</div></div>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 交易路建設提案モーダル ═══ -->
+<div class="mover" id="M_PROP_BUILD">
+  <div class="modal">
+    <div class="m-handle"><div class="m-hbar"></div></div>
+    <div class="m-header"><div class="m-ttl">新交易路の建設提案</div>
+      <button class="m-cls" data-close="M_PROP_BUILD">✕</button></div>
+    <div class="m-body">
+      <label class="fl">① 自国の港（交易路未使用）</label>
+      <div class="fsel-w">
+        <select class="fsel" id="PB_MYPORT" onchange="updatePropBuildOpts()">
+          <option value="">-- 選択 --</option>
+        </select>
+        <span class="fsel-arr">▼</span>
+      </div>
+      <label class="fl">② 相手国の港（交易路未使用）</label>
+      <div class="fsel-w">
+        <select class="fsel" id="PB_OTHERPORT" onchange="updatePropBuildOpts()">
+          <option value="">-- 自国の港を先に選択 --</option>
+        </select>
+        <span class="fsel-arr">▼</span>
+      </div>
+      <label class="fl">③ 交易内容</label>
+      <div class="info-box">収支と各資源の <strong>毎ターンの流れ</strong> を両国分指定してください。プラスは獲得、マイナスは提供を表します（実装に応じて自由に使い分けください）。</div>
+      <div class="res-grid" id="PB_RES"></div>
+    </div>
+    <div class="m-foot">
+      <button class="sbtn sbtn-ac" id="PB_SEND" onclick="doProposeBuild()" style="background:linear-gradient(135deg,#0891b2,#0e7490)">建設提案を送る</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 交易路封鎖提案 ═══ -->
+<div class="mover" id="M_PROP_CLOSE">
+  <div class="modal">
+    <div class="m-handle"><div class="m-hbar"></div></div>
+    <div class="m-header"><div class="m-ttl">交易路の封鎖提案</div>
+      <button class="m-cls" data-close="M_PROP_CLOSE">✕</button></div>
+    <div class="m-body">
+      <label class="fl">封鎖する交易路</label>
+      <div class="fsel-w">
+        <select class="fsel" id="PC_ROUTE">
+          <option value="">-- 選択 --</option>
+        </select>
+        <span class="fsel-arr">▼</span>
+      </div>
+      <div class="info-box" style="margin-top:12px">相手国が承認すると交易路は完全に削除されます。</div>
+    </div>
+    <div class="m-foot">
+      <button class="sbtn sbtn-ng" onclick="doProposeClose()">封鎖を提案</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 交易内容変更提案 ═══ -->
+<div class="mover" id="M_PROP_CHANGE">
+  <div class="modal">
+    <div class="m-handle"><div class="m-hbar"></div></div>
+    <div class="m-header"><div class="m-ttl">交易内容の変更提案</div>
+      <button class="m-cls" data-close="M_PROP_CHANGE">✕</button></div>
+    <div class="m-body">
+      <label class="fl">変更する交易路</label>
+      <div class="fsel-w">
+        <select class="fsel" id="PG_ROUTE" onchange="fillPropChangeTerms()">
+          <option value="">-- 選択 --</option>
+        </select>
+        <span class="fsel-arr">▼</span>
+      </div>
+      <label class="fl" style="margin-top:12px">新しい交易内容</label>
+      <div class="res-grid" id="PG_RES"></div>
+    </div>
+    <div class="m-foot">
+      <button class="sbtn" onclick="doProposeChange()" style="background:linear-gradient(135deg,#9333ea,#7c3aed);color:#fff">変更を提案</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 通知詳細 ═══ -->
+<div class="mover" id="M_DETAIL">
+  <div class="modal">
+    <div class="m-handle"><div class="m-hbar"></div></div>
+    <div class="m-header"><div class="m-ttl" id="DT_TTL">詳細</div>
+      <button class="m-cls" data-close="M_DETAIL">✕</button></div>
+    <div class="m-body" id="DT_BODY"></div>
+    <div class="m-foot" id="DT_FOOT"></div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════
+//  設定
+// ════════════════════════════════════════════════════
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbyzjptECdLyxcmGMLPglKhi0ShVDBrfjWOB4aqGP45nnB1z8NjcxaedPIJxwMI_ilUgjA/exec';
+var LS_URL  = 'trade_gas_url';
+var LS_SES  = 'home_session';
+
+var SESSION = null;
+var INIT    = null;  // {countries, colors, ports}
+var MSGS    = { received:[], sent:[] };
+var ROUTES  = [];
+
+// 資源項目の定義
+var RES_FIELDS = [
+  {key:'income', label:'収入'},
+  {key:'expend', label:'支出'},
+  {key:'metal',  label:'金属'},
+  {key:'mineral',label:'鉱物'},
+  {key:'food',   label:'食料'},
+  {key:'fuel',   label:'燃料'},
+  {key:'civil',  label:'民需'},
+  {key:'milit',  label:'軍需'}
+];
+
+// ════════════════════════════════════════════════════
+//  起動
+// ════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded',function(){
+  var sv=localStorage.getItem(LS_URL); if(sv) GAS_URL=sv;
+  try{var s=sessionStorage.getItem(LS_SES);if(s)SESSION=JSON.parse(s);}catch(e){}
+  if(!SESSION){
+    hideLoading();toast('home.htmlからログインしてください','er');
+    setTimeout(function(){location.href='home.html';},2000); return;
+  }
+  var c=SESSION.color||'#3b82f6';
+  document.getElementById('H_NAME').textContent=SESSION.country;
+  document.getElementById('H_FLAG').style.cssText='background:'+c+';box-shadow:0 0 10px '+c;
+  document.documentElement.style.setProperty('--uc',c);
+  document.documentElement.style.setProperty('--uc2',darken(c,.28));
+
+  // モーダル閉じる
+  document.querySelectorAll('[data-close]').forEach(function(b){
+    b.addEventListener('click', function(){ mc(b.dataset.close); });
+  });
+  document.querySelectorAll('.mover').forEach(function(m){
+    m.addEventListener('click', function(e){ if(e.target===m) m.classList.remove('on'); });
+  });
+
+  // スライダー連動
+  document.getElementById('T_AMT').oninput=function(){document.getElementById('T_AMT_DISP').textContent=this.value;};
+  document.getElementById('R_AMT').oninput=function(){document.getElementById('R_AMT_DISP').textContent=this.value;};
+
+  if(!GAS_URL.trim()){
+    document.getElementById('CFG').classList.add('on');
+    hideLoading();return;
+  }
+  loadAll();
+});
+
+function saveUrl(){
+  var v=document.getElementById('CFG_IN').value.trim();
+  if(!v){toast('URLを入力','er');return;}
+  GAS_URL=v;localStorage.setItem(LS_URL,v);
+  document.getElementById('CFG').classList.remove('on');
+  loadAll();
+}
+
+function loadAll(){
+  showLoading('データ取得中...');
+  Promise.all([
+    fetch(GAS_URL+'?action=getInitData&country='+encodeURIComponent(SESSION.country)).then(function(r){return r.json();}).catch(function(){return null;}),
+    fetch(GAS_URL+'?action=getMessages&country='+encodeURIComponent(SESSION.country)).then(function(r){return r.json();}).catch(function(){return null;}),
+    fetch(GAS_URL+'?action=getRoutes&country='+encodeURIComponent(SESSION.country)).then(function(r){return r.json();}).catch(function(){return null;})
+  ]).then(function(rs){
+    hideLoading();
+    if(rs[0]&&rs[0].success){INIT=rs[0];fillCountrySelects();}
+    if(rs[1]&&rs[1].success){MSGS={received:rs[1].received||[],sent:rs[1].sent||[]};renderLists();}
+    if(rs[2]&&rs[2].success){ROUTES=rs[2].routes||[];renderRoutes();}
+  }).catch(function(e){hideLoading();toast('通信エラー: '+e,'er');});
+}
+function reloadAll(){loadAll();}
+
+// ════════════════════════════════════════════════════
+//  タブ切替
+// ════════════════════════════════════════════════════
+function setTab(t){
+  var map={menu:'P_MENU',notif:'P_NOTIF',sent:'P_SENT',routes:'P_ROUTES'};
+  var tabMap={menu:'TAB_M',notif:'TAB_N',sent:'TAB_S',routes:'TAB_R'};
+  Object.keys(map).forEach(function(k){
+    document.getElementById(map[k]).classList.toggle('on',k===t);
+    document.getElementById(tabMap[k]).classList.toggle('on',k===t);
+  });
+}
+
+// ════════════════════════════════════════════════════
+//  国家セレクト生成
+// ════════════════════════════════════════════════════
+function fillCountrySelects(){
+  if(!INIT) return;
+  var lists=['T_TO','R_TO'];
+  lists.forEach(function(id){
+    var sel=document.getElementById(id);
+    while(sel.options.length>1) sel.remove(1);
+    INIT.countries.forEach(function(c){
+      if(c===SESSION.country) return;
+      var o=document.createElement('option');
+      o.value=c;o.textContent=c;sel.appendChild(o);
+    });
+  });
+}
+
+// ════════════════════════════════════════════════════
+//  通知 & 送信履歴
+// ════════════════════════════════════════════════════
+function renderLists(){
+  // 未処理の受信通知数（保留中の提案/請求）
+  var pending=MSGS.received.filter(function(m){
+    return m.state===2 && (m.tag==='請求'||m.tag==='建設提案'||m.tag==='封鎖提案'||m.tag==='変更提案');
+  });
+  var bdg=document.getElementById('NOTIF_BDG');
+  if(pending.length>0){bdg.textContent=pending.length;}
+  else {bdg.textContent='';}
+
+  renderMailList('NOTIF_LIST', MSGS.received, 'received');
+  renderMailList('SENT_LIST', MSGS.sent, 'sent');
+}
+
+function renderMailList(id, mails, kind){
+  var el=document.getElementById(id);
+  if(!mails.length){
+    el.innerHTML='<div class="empty-block">メッセージはありません</div>';
+    return;
+  }
+  var h='';
+  mails.forEach(function(m,i){
+    var tagCls=tagClass(m.tag);
+    var stateCls=m.state===2?'p':m.state===1?'a':'d';
+    var stateTxt=m.state===2?'保留中':m.state===1?'承諾':'拒否';
+    var preview=buildPreview(m);
+    var peer = kind==='received'? m.from : m.to;
+    var peerLabel = kind==='received'? 'From: '+m.from : 'To: '+m.to;
+    h+='<div class="mail-card" onclick="openDetail(\''+kind+'\','+i+')">'+
+      '<div class="mc-line '+tagCls+'"></div>'+
+      '<div class="mc-content">'+
+        '<div class="mc-top">'+
+          '<span class="mc-tag '+tagCls+'">'+esc(m.tag)+'</span>'+
+          '<span class="mc-state '+stateCls+'">'+stateTxt+'</span>'+
+          '<span class="mc-time">'+esc((m.ts||'').replace(/^\d{4}\//,''))+'</span>'+
+        '</div>'+
+        '<div class="mc-from">'+esc(peerLabel)+'</div>'+
+        '<div class="mc-body">'+esc(preview)+'</div>'+
+      '</div></div>';
+  });
+  el.innerHTML=h;
+}
+
+function tagClass(tag){
+  return tag==='送金'?'transfer':
+         tag==='請求'?'request':
+         tag==='建設提案'?'build':
+         tag==='封鎖提案'?'close':
+         tag==='変更提案'?'change':'transfer';
+}
+
+function buildPreview(m){
+  var d=m.data||{};
+  switch(m.tag){
+    case '送金':      return '金額: '+(d.amount||'?');
+    case '請求':      return '金額: '+(d.amount||'?')+(d.reason?' / '+d.reason:'');
+    case '建設提案':  return (d.portFrom||'?')+' ⇌ '+(d.portTo||'?');
+    case '封鎖提案':  return (d.portA||'?')+' ⇌ '+(d.portB||'?');
+    case '変更提案':  return (d.portA||'?')+' ⇌ '+(d.portB||'?')+' の内容変更';
+    default: return m.body;
+  }
+}
+
+// ════════════════════════════════════════════════════
+//  通知詳細
+// ════════════════════════════════════════════════════
+function openDetail(kind, idx){
+  var m=(kind==='received'?MSGS.received:MSGS.sent)[idx];
+  if(!m) return;
+  var d=m.data||{};
+  var body='';
+  body+='<div style="padding:11px 13px;background:var(--s2);border:1px solid var(--bd2);border-radius:10px;margin-bottom:12px">'+
+    '<div style="font-size:10px;color:var(--t3);letter-spacing:1px;margin-bottom:6px;text-transform:uppercase;font-weight:700">'+esc(m.tag)+'</div>'+
+    '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">'+
+      '<span style="color:var(--t3)">From</span><span style="color:var(--t1);font-weight:700">'+esc(m.from)+'</span></div>'+
+    '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">'+
+      '<span style="color:var(--t3)">To</span><span style="color:var(--t1);font-weight:700">'+esc(m.to)+'</span></div>'+
+    '<div style="display:flex;justify-content:space-between;font-size:12px">'+
+      '<span style="color:var(--t3)">日時</span><span style="color:var(--t2)">'+esc(m.ts||'--')+'</span></div>'+
+    '</div>';
+
+  switch(m.tag){
+    case '送金':
+      body+='<div style="text-align:center;padding:20px;background:var(--s2);border:1px solid var(--bd2);border-radius:10px">'+
+        '<div style="font-size:10px;color:var(--t3);margin-bottom:6px;letter-spacing:1px">送金額</div>'+
+        '<div style="font-size:36px;font-weight:900;color:var(--ag)">'+fmtNum(d.amount||0)+'</div>'+
+        '</div>';
+      break;
+    case '請求':
+      body+='<div style="text-align:center;padding:20px;background:var(--s2);border:1px solid var(--bd2);border-radius:10px;margin-bottom:10px">'+
+        '<div style="font-size:10px;color:var(--t3);margin-bottom:6px;letter-spacing:1px">請求額</div>'+
+        '<div style="font-size:36px;font-weight:900;color:var(--ay)">'+fmtNum(d.amount||0)+'</div>'+
+        '</div>';
+      if(d.reason){
+        body+='<div style="padding:12px;background:var(--s2);border:1px solid var(--bd2);border-radius:10px;font-size:12px;color:var(--t1);line-height:1.6;white-space:pre-wrap;word-break:break-all">'+esc(d.reason)+'</div>';
+      }
+      break;
+    case '建設提案':
+      body+='<div style="padding:12px;background:var(--s2);border:1px solid var(--bd2);border-radius:10px;margin-bottom:10px">'+
+        '<div style="display:flex;align-items:center;gap:10px;justify-content:center">'+
+          '<span style="font-size:13px;font-weight:700">'+esc(d.portFrom||'?')+'</span>'+
+          '<span style="color:var(--acy);font-size:18px">⇌</span>'+
+          '<span style="font-size:13px;font-weight:700">'+esc(d.portTo||'?')+'</span></div></div>';
+      body+=renderTermsView(d.terms, m.from, m.to);
+      break;
+    case '封鎖提案':
+      body+='<div style="padding:12px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px;text-align:center">'+
+        '<div style="font-size:12px;color:var(--ar);margin-bottom:4px;font-weight:700">封鎖される交易路</div>'+
+        '<div style="font-size:14px;font-weight:800">'+esc(d.portA||'?')+' ⇌ '+esc(d.portB||'?')+'</div></div>';
+      break;
+    case '変更提案':
+      body+='<div style="padding:12px;background:var(--s2);border:1px solid var(--bd2);border-radius:10px;margin-bottom:10px;text-align:center">'+
+        '<div style="font-size:12px;color:var(--ap);margin-bottom:4px;font-weight:700">内容変更提案</div>'+
+        '<div style="font-size:13px;font-weight:700">'+esc(d.portA||'?')+' ⇌ '+esc(d.portB||'?')+'</div></div>';
+      body+=renderTermsView(d.terms, m.from, m.to);
+      break;
+  }
+
+  document.getElementById('DT_TTL').textContent=m.tag;
+  document.getElementById('DT_BODY').innerHTML=body;
+
+  // フッター（応答ボタン or 状態表示）
+  var foot=document.getElementById('DT_FOOT');
+  var isReceivedPending = (kind==='received' && m.state===2 &&
+    (m.tag==='請求'||m.tag==='建設提案'||m.tag==='封鎖提案'||m.tag==='変更提案'));
+  if(isReceivedPending){
+    foot.innerHTML='<div style="display:flex;gap:8px">'+
+      '<button class="sbtn sbtn-ng" style="flex:1" onclick="doRespond('+m.rowNum+',false)">拒否</button>'+
+      '<button class="sbtn sbtn-ok" style="flex:2" onclick="doRespond('+m.rowNum+',true)">承諾</button>'+
+      '</div>';
+  } else {
+    var stateLbl=m.state===2?'保留中':m.state===1?'承諾済み':'拒否済み';
+    foot.innerHTML='<div style="text-align:center;font-size:11px;color:var(--t2);letter-spacing:1px">'+stateLbl+'</div>';
+  }
+
+  mo('M_DETAIL');
+}
+
+function renderTermsView(terms, fromCountry, toCountry){
+  if(!terms) return '';
+  var h='<div class="res-grid" style="margin-top:0">';
+  ['A','B'].forEach(function(side,si){
+    var title=(side==='A'?fromCountry:toCountry)+'の収支';
+    h+='<div class="res-col"><div class="res-col-t">'+esc(title)+'</div>';
+    RES_FIELDS.forEach(function(f){
+      var v=Number(terms[f.key+side]||0);
+      var cls=v>0?'pos':v<0?'neg':'';
+      h+='<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0">'+
+        '<span style="color:var(--t3)">'+esc(f.label)+'</span>'+
+        '<span style="font-weight:700;color:var(--t1)" class="'+cls+'">'+(v>0?'+':'')+fmtNum(v)+'</span></div>';
+    });
+    h+='</div>';
+  });
+  h+='</div>';
+  return h;
+}
+
+// ════════════════════════════════════════════════════
+//  交易路描画
+// ════════════════════════════════════════════════════
+function renderRoutes(){
+  var el=document.getElementById('ROUTES_LIST');
+  if(!ROUTES.length){
+    el.innerHTML='<div class="empty-block">交易路はありません</div>';
+    return;
+  }
+  var h='';
+  ROUTES.forEach(function(r,i){
+    var cA=INIT?INIT.colors[r.countryA]:'#334455';
+    var cB=INIT?INIT.colors[r.countryB]:'#334455';
+    h+='<div class="route-card">'+
+      '<div class="rc-hd">'+
+        '<div class="rc-country"><div class="rc-dot" style="background:'+esc(cA)+'"></div>'+esc(r.countryA)+'</div>'+
+        '<span class="rc-arrow">⇌</span>'+
+        '<div class="rc-country"><div class="rc-dot" style="background:'+esc(cB)+'"></div>'+esc(r.countryB)+'</div>'+
+        '<div class="rc-port" style="width:100%;margin-top:4px">'+esc(r.portA)+' ⇌ '+esc(r.portB)+'</div>'+
+      '</div>'+
+      '<div class="rc-flows">'+
+        renderRouteSide(r, 'A')+
+        renderRouteSide(r, 'B')+
+      '</div>'+
+      '<div class="rc-acts">'+
+        '<button class="rc-act change" onclick="openPropChangeFor('+r.rowNum+')">内容変更</button>'+
+        '<button class="rc-act close" onclick="openPropCloseFor('+r.rowNum+')">封鎖提案</button>'+
+      '</div>'+
+      '</div>';
+  });
+  el.innerHTML=h;
+}
+function renderRouteSide(r, side){
+  var cnt = side==='A'?r.countryA:r.countryB;
+  var h='<div class="rc-side"><div class="rc-side-h">'+esc(cnt)+'</div>';
+  RES_FIELDS.forEach(function(f){
+    var key = f.key + side;
+    var v=r[key]||0;
+    var cls=v>0?'pos':v<0?'neg':'';
+    h+='<div class="rc-item"><span class="rc-item-l">'+esc(f.label)+'</span>'+
+      '<span class="rc-item-v '+cls+'">'+(v>0?'+':'')+fmtNum(v)+'</span></div>';
+  });
+  h+='</div>';
+  return h;
+}
+
+// ════════════════════════════════════════════════════
+//  送金
+// ════════════════════════════════════════════════════
+function openTransfer(){
+  document.getElementById('T_TO').value='';
+  document.getElementById('T_AMT').value=500;
+  document.getElementById('T_AMT_DISP').textContent='500';
+  mo('M_TRANSFER');
+}
+function doTransfer(){
+  var to=document.getElementById('T_TO').value;
+  var amt=parseInt(document.getElementById('T_AMT').value);
+  if(!to){toast('送金先を選択','wa');return;}
+  if(!amt||amt<=0){toast('金額が不正','wa');return;}
+  if(!confirm(to+'に '+amt+' を送金します。よろしいですか？')) return;
+  var btn=document.getElementById('T_SEND');
+  btn.disabled=true;btn.textContent='送金中...';
+  showLoading('送金中...');
+  postAPI('sendTransfer', {from:SESSION.country, to:to, amount:amt})
+    .then(function(d){
+      hideLoading();btn.disabled=false;btn.textContent='送金する';
+      if(d&&d.success){toast('送金しました','ok');mc('M_TRANSFER');loadAll();}
+      else toast(d?d.error:'送金エラー','er');
+    });
+}
+
+// ════════════════════════════════════════════════════
+//  請求
+// ════════════════════════════════════════════════════
+function openRequest(){
+  document.getElementById('R_TO').value='';
+  document.getElementById('R_AMT').value=500;
+  document.getElementById('R_AMT_DISP').textContent='500';
+  document.getElementById('R_REASON').value='';
+  mo('M_REQUEST');
+}
+function doRequest(){
+  var to=document.getElementById('R_TO').value;
+  var amt=parseInt(document.getElementById('R_AMT').value);
+  var reason=document.getElementById('R_REASON').value.trim();
+  if(!to){toast('請求先を選択','wa');return;}
+  if(!amt||amt<=0){toast('金額が不正','wa');return;}
+  if(!confirm(to+'に '+amt+' を請求します。よろしいですか？')) return;
+  var btn=document.getElementById('R_SEND');
+  btn.disabled=true;btn.textContent='送信中...';
+  showLoading('送信中...');
+  postAPI('sendRequest', {from:SESSION.country, to:to, amount:amt, reason:reason})
+    .then(function(d){
+      hideLoading();btn.disabled=false;btn.textContent='請求を送る';
+      if(d&&d.success){toast('請求を送信しました','ok');mc('M_REQUEST');loadAll();}
+      else toast(d?d.error:'請求エラー','er');
+    });
+}
+
+// ════════════════════════════════════════════════════
+//  交易路建設提案
+// ════════════════════════════════════════════════════
+function openProposeChoice(){ mo('M_PROP_CHOICE'); }
+
+function openPropBuild(){
+  mc('M_PROP_CHOICE');
+  if(!INIT){toast('データ未取得','er');return;}
+
+  // 自国の港リスト：所有する・港あり・未使用
+  var myPorts  = INIT.ports.filter(function(p){return p.country===SESSION.country && !p.occupied;});
+  var othPorts = INIT.ports.filter(function(p){return p.country!==SESSION.country && !p.occupied;});
+
+  var selA=document.getElementById('PB_MYPORT');
+  selA.innerHTML='<option value="">-- 選択 --</option>';
+  myPorts.forEach(function(p){
+    var o=document.createElement('option');o.value=p.name;o.textContent=p.name;selA.appendChild(o);
+  });
+
+  var selB=document.getElementById('PB_OTHERPORT');
+  selB.innerHTML='<option value="">-- 自国の港を先に選択 --</option>';
+  othPorts.forEach(function(p){
+    var o=document.createElement('option');o.value=p.name+'|'+p.country;
+    o.textContent='['+p.country+'] '+p.name;selB.appendChild(o);
+  });
+
+  // 資源入力グリッド生成
+  document.getElementById('PB_RES').innerHTML=buildResGrid(SESSION.country, '相手国', 'PB_');
+
+  mo('M_PROP_BUILD');
+}
+
+function buildResGrid(titleA, titleB, prefix){
+  var h='';
+  ['A','B'].forEach(function(side){
+    var t=side==='A'?titleA:titleB;
+    h+='<div class="res-col"><div class="res-col-t">'+esc(t)+'</div>';
+    RES_FIELDS.forEach(function(f){
+      h+='<div class="res-row">'+
+        '<span class="res-lbl">'+esc(f.label)+'</span>'+
+        '<input type="number" class="res-inp" id="'+prefix+f.key+side+'" value="0" step="1">'+
+        '</div>';
+    });
+    h+='</div>';
+  });
+  return h;
+}
+
+function updatePropBuildOpts(){} // 予約（将来的な動的フィルタ用）
+
+function doProposeBuild(){
+  var myPort=document.getElementById('PB_MYPORT').value;
+  var oth=document.getElementById('PB_OTHERPORT').value;
+  if(!myPort){toast('自国の港を選択','wa');return;}
+  if(!oth){toast('相手国の港を選択','wa');return;}
+  var parts=oth.split('|');
+  var othPort=parts[0], othCnt=parts[1];
+  // 条件収集
+  var terms={};
+  ['A','B'].forEach(function(side){
+    RES_FIELDS.forEach(function(f){
+      var v=parseInt(document.getElementById('PB_'+f.key+side).value);
+      terms[f.key+side] = isNaN(v)?0:v;
+    });
+  });
+  if(!confirm(othCnt+'に「'+myPort+' ⇌ '+othPort+'」の交易路建設を提案します。')) return;
+  var btn=document.getElementById('PB_SEND');
+  btn.disabled=true;btn.textContent='送信中...';
+  showLoading('送信中...');
+  postAPI('proposeBuild', {
+    from:SESSION.country, to:othCnt,
+    portFrom:myPort, portTo:othPort,
+    terms:JSON.stringify(terms)
+  }).then(function(d){
+    hideLoading();btn.disabled=false;btn.textContent='建設提案を送る';
+    if(d&&d.success){toast('提案を送信しました','ok');mc('M_PROP_BUILD');loadAll();}
+    else toast(d?d.error:'提案エラー','er');
+  });
+}
+
+// ════════════════════════════════════════════════════
+//  交易路封鎖提案
+// ════════════════════════════════════════════════════
+function openPropClose(){
+  mc('M_PROP_CHOICE');
+  var sel=document.getElementById('PC_ROUTE');
+  sel.innerHTML='<option value="">-- 選択 --</option>';
+  ROUTES.forEach(function(r){
+    var o=document.createElement('option');
+    o.value=r.rowNum;
+    o.textContent=r.portA+' ⇌ '+r.portB+' ('+r.countryA+' / '+r.countryB+')';
+    sel.appendChild(o);
+  });
+  if(!ROUTES.length){toast('自国に関わる交易路がありません','wa');return;}
+  mo('M_PROP_CLOSE');
+}
+function openPropCloseFor(rowNum){
+  mc('M_PROP_CHOICE');
+  openPropClose();
+  document.getElementById('PC_ROUTE').value=rowNum;
+}
+function doProposeClose(){
+  var rn=parseInt(document.getElementById('PC_ROUTE').value);
+  if(!rn){toast('交易路を選択','wa');return;}
+  var route=ROUTES.find(function(r){return r.rowNum===rn;});
+  if(!route) return;
+  var other = route.countryA===SESSION.country ? route.countryB : route.countryA;
+  if(!confirm(other+'に「'+route.portA+' ⇌ '+route.portB+'」の封鎖を提案します。')) return;
+  showLoading('送信中...');
+  postAPI('proposeClose', {from:SESSION.country, to:other, routeRow:rn})
+    .then(function(d){
+      hideLoading();
+      if(d&&d.success){toast('封鎖提案を送信しました','ok');mc('M_PROP_CLOSE');loadAll();}
+      else toast(d?d.error:'送信エラー','er');
+    });
+}
+
+// ════════════════════════════════════════════════════
+//  交易内容変更提案
+// ════════════════════════════════════════════════════
+function openPropChange(){
+  mc('M_PROP_CHOICE');
+  var sel=document.getElementById('PG_ROUTE');
+  sel.innerHTML='<option value="">-- 選択 --</option>';
+  ROUTES.forEach(function(r){
+    var o=document.createElement('option');
+    o.value=r.rowNum;
+    o.textContent=r.portA+' ⇌ '+r.portB+' ('+r.countryA+' / '+r.countryB+')';
+    sel.appendChild(o);
+  });
+  document.getElementById('PG_RES').innerHTML='';
+  if(!ROUTES.length){toast('自国に関わる交易路がありません','wa');return;}
+  mo('M_PROP_CHANGE');
+}
+function openPropChangeFor(rowNum){
+  mc('M_PROP_CHOICE');
+  openPropChange();
+  document.getElementById('PG_ROUTE').value=rowNum;
+  fillPropChangeTerms();
+}
+function fillPropChangeTerms(){
+  var rn=parseInt(document.getElementById('PG_ROUTE').value);
+  if(!rn){document.getElementById('PG_RES').innerHTML='';return;}
+  var route=ROUTES.find(function(r){return r.rowNum===rn;});
+  if(!route) return;
+  document.getElementById('PG_RES').innerHTML=buildResGrid(route.countryA, route.countryB, 'PG_');
+  // 現在値を入れる
+  RES_FIELDS.forEach(function(f){
+    document.getElementById('PG_'+f.key+'A').value=route[f.key+'A']||0;
+    document.getElementById('PG_'+f.key+'B').value=route[f.key+'B']||0;
+  });
+}
+function doProposeChange(){
+  var rn=parseInt(document.getElementById('PG_ROUTE').value);
+  if(!rn){toast('交易路を選択','wa');return;}
+  var route=ROUTES.find(function(r){return r.rowNum===rn;});
+  if(!route) return;
+  var terms={};
+  ['A','B'].forEach(function(side){
+    RES_FIELDS.forEach(function(f){
+      var v=parseInt(document.getElementById('PG_'+f.key+side).value);
+      terms[f.key+side] = isNaN(v)?0:v;
+    });
+  });
+  var other = route.countryA===SESSION.country ? route.countryB : route.countryA;
+  if(!confirm(other+'に「'+route.portA+' ⇌ '+route.portB+'」の内容変更を提案します。')) return;
+  showLoading('送信中...');
+  postAPI('proposeChange', {from:SESSION.country, to:other, routeRow:rn, terms:JSON.stringify(terms)})
+    .then(function(d){
+      hideLoading();
+      if(d&&d.success){toast('変更提案を送信しました','ok');mc('M_PROP_CHANGE');loadAll();}
+      else toast(d?d.error:'送信エラー','er');
+    });
+}
+
+// ════════════════════════════════════════════════════
+//  提案への応答
+// ════════════════════════════════════════════════════
+function doRespond(rowNum, accept){
+  var msg=accept?'この提案を承諾します。':'この提案を拒否します。';
+  if(!confirm(msg+'\nよろしいですか？')) return;
+  mc('M_DETAIL');
+  showLoading('処理中...');
+  postAPI('respondMessage', {rowNum:rowNum, requester:SESSION.country, accept:accept?'true':'false'})
+    .then(function(d){
+      hideLoading();
+      if(d&&d.success){
+        toast(accept?'承諾しました':'拒否しました','ok');
+        loadAll();
+      } else toast(d?d.error:'処理エラー','er');
+    });
+}
+
+// ════════════════════════════════════════════════════
+//  API POST Helper
+// ════════════════════════════════════════════════════
+function postAPI(action, params){
+  var body = new URLSearchParams();
+  body.append('action', action);
+  Object.keys(params).forEach(function(k){
+    body.append(k, params[k]!=null ? String(params[k]) : '');
+  });
+  return fetch(GAS_URL, {method:'POST', body:body})
+    .then(function(r){return r.json();})
+    .catch(function(e){toast('通信エラー: '+e,'er'); return null;});
+}
+
+// ════════════════════════════════════════════════════
+//  モーダル開閉 / ユーティリティ
+// ════════════════════════════════════════════════════
+function mo(id){document.getElementById(id).classList.add('on');}
+function mc(id){document.getElementById(id).classList.remove('on');}
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmtNum(n){
+  n=Number(n)||0;
+  return n.toLocaleString();
+}
+function darken(hex,a){
+  hex=(hex||'#3b82f6').replace('#','');
+  if(hex.length===3)hex=hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+  var r=Math.max(0,Math.round(parseInt(hex.substr(0,2),16)*(1-a)));
+  var g=Math.max(0,Math.round(parseInt(hex.substr(2,2),16)*(1-a)));
+  var b=Math.max(0,Math.round(parseInt(hex.substr(4,2),16)*(1-a)));
+  return '#'+(r<16?'0':'')+r.toString(16)+(g<16?'0':'')+g.toString(16)+(b<16?'0':'')+b.toString(16);
+}
+function showLoading(t){document.getElementById('LOV_TXT').textContent=t||'読込中...';document.getElementById('LOV').classList.add('on');}
+function hideLoading(){document.getElementById('LOV').classList.remove('on');}
+var _tt;
+function toast(msg,type){
+  var el=document.getElementById('TOAST');
+  el.textContent=msg;el.className='toast on '+(type||'');
+  clearTimeout(_tt);_tt=setTimeout(function(){el.className='toast';},3500);
+}
+</script>
+</body>
+</html>
