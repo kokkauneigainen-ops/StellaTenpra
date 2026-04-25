@@ -144,6 +144,10 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--t1);
 .mc-time{margin-left:auto;font-size:9px;color:var(--t3);font-weight:500}
 .mc-body{font-size:11px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
+/* 交易路：自国側のみ表示 */
+.rc-side-single{background:var(--s2);border:1px solid var(--bd2);border-radius:9px;
+  padding:10px 12px;margin-bottom:10px}
+
 /* 交易路カード */
 .route-card{background:var(--s1);border:1px solid var(--bd2);border-radius:12px;
   padding:12px 14px;margin-bottom:10px;position:relative;overflow:hidden}
@@ -529,7 +533,7 @@ textarea.finp{resize:none;min-height:80px;line-height:1.6}
 // ════════════════════════════════════════════════════
 //  設定
 // ════════════════════════════════════════════════════
-var GAS_URL = 'https://script.google.com/macros/s/AKfycbyUdlxL5LYLBQVUKiT04oYzmT-ek0DPX3NtQV-bNMtZwN9Hm2hbphZ9-vODXTGUJOCjaQ/exec'; 
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbwWFQLF1jcqOAB6HgkvmPi_87J252q0wxB-uxYyV_dyCEs16OLnyK3cl7qqUsIePl2OIA/exec'; 
 var LS_URL  = 'trade_gas_url';
 var LS_SES  = 'home_session';
 
@@ -779,20 +783,22 @@ function openDetail(kind, idx){
 
 function renderTermsView(terms, fromCountry, toCountry){
   if(!terms) return '';
-  var h='<div class="res-grid" style="margin-top:0">';
-  ['A','B'].forEach(function(side,si){
-    var title=(side==='A'?fromCountry:toCountry)+'の収支';
-    h+='<div class="res-col"><div class="res-col-t">'+esc(title)+'</div>';
-    RES_FIELDS.forEach(function(f){
-      var v=Number(terms[f.key+side]||0);
-      var cls=v>0?'pos':v<0?'neg':'';
-      h+='<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0">'+
-        '<span style="color:var(--t3)">'+esc(f.label)+'</span>'+
-        '<span style="font-weight:700;color:var(--t1)" class="'+cls+'">'+(v>0?'+':'')+fmtNum(v)+'</span></div>';
-    });
-    h+='</div>';
+  // 閲覧者の立場を判定（from=A側、to=B側）
+  var viewIsA = (fromCountry === SESSION.country);
+  var ownSide = viewIsA ? 'A' : 'B';
+  var ownTitle = SESSION.country + 'の増減';
+  var h='<div style="margin-bottom:8px;font-size:11px;font-weight:700;color:var(--t2)">'+ownTitle+'</div>';
+  h+='<div class="rc-side-single" style="margin-bottom:6px">';
+  RES_FIELDS.forEach(function(f){
+    var v=Number(terms[f.key+ownSide]||0);
+    var cls=v>0?'pos':v<0?'neg':'';
+    h+='<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0">'+
+      '<span style="color:var(--t2)">'+esc(f.label)+'</span>'+
+      '<span style="font-weight:700;color:var(--t1)" class="'+cls+'">'+(v>0?'+':'')+fmtNum(v)+'</span></div>';
   });
   h+='</div>';
+  h+='<div style="font-size:10px;color:var(--t3);text-align:center;padding:4px">'+
+    esc(viewIsA?toCountry:fromCountry)+'の増減は自動計算（逆値）</div>';
   return h;
 }
 
@@ -807,19 +813,37 @@ function renderRoutes(){
   }
   var h='';
   ROUTES.forEach(function(r,i){
-    var cA=INIT?INIT.colors[r.countryA]:'#334455';
-    var cB=INIT?INIT.colors[r.countryB]:'#334455';
+    var ownIsA = r.countryA === SESSION.country;
+    var partner = ownIsA ? r.countryB : r.countryA;
+    var pColor = INIT ? (INIT.colors[partner]||'#334455') : '#334455';
+    var myColor= INIT ? (INIT.colors[SESSION.country]||'#334455') : '#334455';
+    var ownSide = ownIsA ? 'A' : 'B';
     h+='<div class="route-card">'+
       '<div class="rc-hd">'+
-        '<div class="rc-country"><div class="rc-dot" style="background:'+esc(cA)+'"></div>'+esc(r.countryA)+'</div>'+
+        '<div class="rc-country">'+
+          '<div class="rc-dot" style="background:'+esc(myColor)+'"></div>'+esc(SESSION.country)+'</div>'+
         '<span class="rc-arrow">⇌</span>'+
-        '<div class="rc-country"><div class="rc-dot" style="background:'+esc(cB)+'"></div>'+esc(r.countryB)+'</div>'+
-        '<div class="rc-port" style="width:100%;margin-top:4px">'+esc(r.portA)+' ⇌ '+esc(r.portB)+'</div>'+
+        '<div class="rc-country">'+
+          '<div class="rc-dot" style="background:'+esc(pColor)+'"></div>'+esc(partner)+'</div>'+
+        '<div class="rc-port" style="width:100%;margin-top:3px">'+esc(r.portA)+' ⇌ '+esc(r.portB)+'</div>'+
       '</div>'+
-      '<div class="rc-flows">'+
-        renderRouteSide(r, 'A')+
-        renderRouteSide(r, 'B')+
-      '</div>'+
+      // 自国側の増減だけ表示
+      '<div class="rc-side-single">'+
+        '<div class="rc-side-h" style="margin-bottom:8px;font-size:10px;font-weight:800;color:var(--t2);'+
+          'letter-spacing:.5px">自国の増減</div>';
+    var ownValues = {};
+    RES_FIELDS.forEach(function(f){ ownValues[f.key] = r[f.key+ownSide]||0; });
+    // 非ゼロのみ表示（全ゼロなら全部出す）
+    var nonZero = RES_FIELDS.filter(function(f){ return ownValues[f.key] !== 0; });
+    var showFields = nonZero.length > 0 ? nonZero : RES_FIELDS;
+    showFields.forEach(function(f){
+      var v = ownValues[f.key];
+      var cls = v>0?'pos':v<0?'neg':'';
+      h+='<div class="rc-item">'+
+        '<span class="rc-item-l">'+esc(f.label)+'</span>'+
+        '<span class="rc-item-v '+cls+'">'+(v>0?'+':'')+fmtNum(v)+'</span></div>';
+    });
+    h+='</div>'+
       '<div class="rc-acts">'+
         '<button class="rc-act change" onclick="openPropChangeFor('+r.rowNum+')">内容変更</button>'+
         '<button class="rc-act close" onclick="openPropCloseFor('+r.rowNum+')">封鎖提案</button>'+
@@ -827,19 +851,6 @@ function renderRoutes(){
       '</div>';
   });
   el.innerHTML=h;
-}
-function renderRouteSide(r, side){
-  var cnt = side==='A'?r.countryA:r.countryB;
-  var h='<div class="rc-side"><div class="rc-side-h">'+esc(cnt)+'</div>';
-  RES_FIELDS.forEach(function(f){
-    var key = f.key + side;
-    var v=r[key]||0;
-    var cls=v>0?'pos':v<0?'neg':'';
-    h+='<div class="rc-item"><span class="rc-item-l">'+esc(f.label)+'</span>'+
-      '<span class="rc-item-v '+cls+'">'+(v>0?'+':'')+fmtNum(v)+'</span></div>';
-  });
-  h+='</div>';
-  return h;
 }
 
 // ════════════════════════════════════════════════════
@@ -929,29 +940,28 @@ function openPropBuild(){
 }
 
 function buildResGrid(titleA, titleB, prefix){
-  // 上限: 金銭(収入/支出) ±100000 / 物資 ±10000
-  var h='';
-  ['A','B'].forEach(function(side){
-    var t=side==='A'?titleA:titleB;
-    h+='<div class="res-col"><div class="res-col-t">'+esc(t)+'</div>';
-    RES_FIELDS.forEach(function(f){
-      var max = (f.key==='income'||f.key==='expend') ? 100000 : 10000;
-      h+='<div class="res-row">'+
-        '<span class="res-lbl">'+esc(f.label)+'</span>'+
-        '<input type="number" class="res-inp" id="'+prefix+f.key+side+
-          '" value="0" step="1" min="-'+max+'" max="'+max+'">'+
-        '</div>';
-    });
-    h+='</div>';
+  // 自国側のみ入力。相手国は自動で逆の値が設定される。
+  var h='<div class="res-col" style="grid-column:1/-1"><div class="res-col-t">'+esc(titleA)+'の増減</div>';
+  RES_FIELDS.forEach(function(f){
+    var max = (f.key==='income'||f.key==='expend') ? 100000 : 10000;
+    h+='<div class="res-row">'+
+      '<span class="res-lbl">'+esc(f.label)+'</span>'+
+      '<input type="number" class="res-inp" id="'+prefix+f.key+'A'+
+        '" value="0" step="1" min="-'+max+'" max="'+max+'">'+
+      '</div>';
   });
+  h+='</div>';
+  h+='<div style="grid-column:1/-1;padding:7px 10px;background:rgba(6,182,212,.06);'+
+     'border:1px solid rgba(6,182,212,.18);border-radius:8px;'+
+     'font-size:10px;color:var(--acy);text-align:center;font-weight:600;letter-spacing:.3px">'+
+     esc(titleB||'相手国')+'の増減は自動で反転して設定されます</div>';
   return h;
 }
 
-// 端末側 上限チェック
+// 端末側 上限チェック（Aのみチェック、Bは自動算出のため不要）
 function validateTermsLocal(terms){
-  var moneyKeys = ['incomeA','expendA','incomeB','expendB'];
-  var goodsKeys = ['metalA','mineralA','foodA','fuelA','civilA','militA',
-                   'metalB','mineralB','foodB','fuelB','civilB','militB'];
+  var moneyKeys = ['incomeA','expendA'];
+  var goodsKeys = ['metalA','mineralA','foodA','fuelA','civilA','militA'];
   for(var i=0;i<moneyKeys.length;i++){
     if(Math.abs(Number(terms[moneyKeys[i]]||0)) > 100000) return '収入/支出は ±100,000 以内にしてください';
   }
@@ -970,13 +980,13 @@ function doProposeBuild(){
   if(!oth){toast('相手国の港を選択','wa');return;}
   var parts=oth.split('|');
   var othPort=parts[0], othCnt=parts[1];
-  // 条件収集
+  // 自国(A)側の値のみ収集、B側は自動で逆値
   var terms={};
-  ['A','B'].forEach(function(side){
-    RES_FIELDS.forEach(function(f){
-      var v=parseInt(document.getElementById('PB_'+f.key+side).value);
-      terms[f.key+side] = isNaN(v)?0:v;
-    });
+  RES_FIELDS.forEach(function(f){
+    var v=parseInt(document.getElementById('PB_'+f.key+'A').value);
+    var n = isNaN(v)?0:v;
+    terms[f.key+'A'] = n;
+    terms[f.key+'B'] = -n;
   });
   // 上限チェック
   var verr = validateTermsLocal(terms);
@@ -1061,11 +1071,17 @@ function fillPropChangeTerms(){
   if(!rn){document.getElementById('PG_RES').innerHTML='';return;}
   var route=ROUTES.find(function(r){return r.rowNum===rn;});
   if(!route) return;
-  document.getElementById('PG_RES').innerHTML=buildResGrid(route.countryA, route.countryB, 'PG_');
-  // 現在値を入れる
+
+  var ownIsA = route.countryA === SESSION.country;
+  var partner = ownIsA ? route.countryB : route.countryA;
+  // 自国側だけのグリッドを生成
+  document.getElementById('PG_RES').innerHTML=buildResGrid(SESSION.country, partner, 'PG_');
+
+  // 現在の自国値を入力欄に入れる
   RES_FIELDS.forEach(function(f){
-    document.getElementById('PG_'+f.key+'A').value=route[f.key+'A']||0;
-    document.getElementById('PG_'+f.key+'B').value=route[f.key+'B']||0;
+    var cur = ownIsA ? (route[f.key+'A']||0) : (route[f.key+'B']||0);
+    var el = document.getElementById('PG_'+f.key+'A');
+    if(el) el.value = cur;
   });
 }
 function doProposeChange(){
@@ -1073,17 +1089,25 @@ function doProposeChange(){
   if(!rn){toast('交易路を選択','wa');return;}
   var route=ROUTES.find(function(r){return r.rowNum===rn;});
   if(!route) return;
+  var ownIsA = route.countryA === SESSION.country;
+
+  // 自国(A入力欄)の値を収集、相手側は自動で逆値
   var terms={};
-  ['A','B'].forEach(function(side){
-    RES_FIELDS.forEach(function(f){
-      var v=parseInt(document.getElementById('PG_'+f.key+side).value);
-      terms[f.key+side] = isNaN(v)?0:v;
-    });
+  RES_FIELDS.forEach(function(f){
+    var v=parseInt(document.getElementById('PG_'+f.key+'A').value);
+    var n = isNaN(v)?0:v;
+    if(ownIsA){
+      terms[f.key+'A'] = n;
+      terms[f.key+'B'] = -n;
+    } else {
+      terms[f.key+'B'] = n;
+      terms[f.key+'A'] = -n;
+    }
   });
   // 上限チェック
   var verr = validateTermsLocal(terms);
   if(verr){toast(verr,'er');return;}
-  var other = route.countryA===SESSION.country ? route.countryB : route.countryA;
+  var other = ownIsA ? route.countryB : route.countryA;
   if(!confirm(other+'に「'+route.portA+' ⇌ '+route.portB+'」の内容変更を提案します。')) return;
   showLoading('送信中...');
   postAPI('proposeChange', {from:SESSION.country, to:other, routeRow:rn, terms:JSON.stringify(terms)})
