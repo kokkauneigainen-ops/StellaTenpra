@@ -460,7 +460,7 @@ textarea.finp{resize:none;min-height:80px;line-height:1.6}
         <span class="fsel-arr">▼</span>
       </div>
       <label class="fl">③ 交易内容</label>
-      <div class="info-box">収支と各資源の <strong>毎ターンの流れ</strong> を両国分指定してください。プラスは獲得、マイナスは提供を表します（実装に応じて自由に使い分けください）。</div>
+      <div class="info-box">収支と各資源の <strong>毎ターンの流れ</strong> を両国分指定してください。プラスは獲得、マイナスは提供を表します。<br>上限：<strong>金銭 ±100,000</strong> / <strong>各資源 ±10,000</strong></div>
       <div class="res-grid" id="PB_RES"></div>
     </div>
     <div class="m-foot">
@@ -529,7 +529,7 @@ textarea.finp{resize:none;min-height:80px;line-height:1.6}
 // ════════════════════════════════════════════════════
 //  設定
 // ════════════════════════════════════════════════════
-var GAS_URL = 'https://script.google.com/macros/s/AKfycbyzjptECdLyxcmGMLPglKhi0ShVDBrfjWOB4aqGP45nnB1z8NjcxaedPIJxwMI_ilUgjA/exec';
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbyUdlxL5LYLBQVUKiT04oYzmT-ek0DPX3NtQV-bNMtZwN9Hm2hbphZ9-vODXTGUJOCjaQ/exec'; 
 var LS_URL  = 'trade_gas_url';
 var LS_SES  = 'home_session';
 
@@ -596,9 +596,9 @@ function saveUrl(){
 function loadAll(){
   showLoading('データ取得中...');
   Promise.all([
-    fetch(GAS_URL+'?action=getInitData&country='+encodeURIComponent(SESSION.country)).then(function(r){return r.json();}).catch(function(){return null;}),
-    fetch(GAS_URL+'?action=getMessages&country='+encodeURIComponent(SESSION.country)).then(function(r){return r.json();}).catch(function(){return null;}),
-    fetch(GAS_URL+'?action=getRoutes&country='+encodeURIComponent(SESSION.country)).then(function(r){return r.json();}).catch(function(){return null;})
+    postAPI('getInitData', {country:SESSION.country}),
+    postAPI('getMessages', {country:SESSION.country}),
+    postAPI('getRoutes',   {country:SESSION.country})
   ]).then(function(rs){
     hideLoading();
     if(rs[0]&&rs[0].success){INIT=rs[0];fillCountrySelects();}
@@ -929,19 +929,36 @@ function openPropBuild(){
 }
 
 function buildResGrid(titleA, titleB, prefix){
+  // 上限: 金銭(収入/支出) ±100000 / 物資 ±10000
   var h='';
   ['A','B'].forEach(function(side){
     var t=side==='A'?titleA:titleB;
     h+='<div class="res-col"><div class="res-col-t">'+esc(t)+'</div>';
     RES_FIELDS.forEach(function(f){
+      var max = (f.key==='income'||f.key==='expend') ? 100000 : 10000;
       h+='<div class="res-row">'+
         '<span class="res-lbl">'+esc(f.label)+'</span>'+
-        '<input type="number" class="res-inp" id="'+prefix+f.key+side+'" value="0" step="1">'+
+        '<input type="number" class="res-inp" id="'+prefix+f.key+side+
+          '" value="0" step="1" min="-'+max+'" max="'+max+'">'+
         '</div>';
     });
     h+='</div>';
   });
   return h;
+}
+
+// 端末側 上限チェック
+function validateTermsLocal(terms){
+  var moneyKeys = ['incomeA','expendA','incomeB','expendB'];
+  var goodsKeys = ['metalA','mineralA','foodA','fuelA','civilA','militA',
+                   'metalB','mineralB','foodB','fuelB','civilB','militB'];
+  for(var i=0;i<moneyKeys.length;i++){
+    if(Math.abs(Number(terms[moneyKeys[i]]||0)) > 100000) return '収入/支出は ±100,000 以内にしてください';
+  }
+  for(var i=0;i<goodsKeys.length;i++){
+    if(Math.abs(Number(terms[goodsKeys[i]]||0)) > 10000) return '各資源は ±10,000 以内にしてください';
+  }
+  return null;
 }
 
 function updatePropBuildOpts(){} // 予約（将来的な動的フィルタ用）
@@ -961,6 +978,9 @@ function doProposeBuild(){
       terms[f.key+side] = isNaN(v)?0:v;
     });
   });
+  // 上限チェック
+  var verr = validateTermsLocal(terms);
+  if(verr){toast(verr,'er');return;}
   if(!confirm(othCnt+'に「'+myPort+' ⇌ '+othPort+'」の交易路建設を提案します。')) return;
   var btn=document.getElementById('PB_SEND');
   btn.disabled=true;btn.textContent='送信中...';
@@ -1060,6 +1080,9 @@ function doProposeChange(){
       terms[f.key+side] = isNaN(v)?0:v;
     });
   });
+  // 上限チェック
+  var verr = validateTermsLocal(terms);
+  if(verr){toast(verr,'er');return;}
   var other = route.countryA===SESSION.country ? route.countryB : route.countryA;
   if(!confirm(other+'に「'+route.portA+' ⇌ '+route.portB+'」の内容変更を提案します。')) return;
   showLoading('送信中...');
@@ -1090,15 +1113,17 @@ function doRespond(rowNum, accept){
 }
 
 // ════════════════════════════════════════════════════
-//  API POST Helper
+//  API Helper（CORS対策: text/plain で simple request 化）
 // ════════════════════════════════════════════════════
+// Content-Type を指定しない or text/plain にすると preflight 不要になる
+// → GAS が自動で Access-Control-Allow-Origin: * を返してくれる
 function postAPI(action, params){
-  var body = new URLSearchParams();
-  body.append('action', action);
-  Object.keys(params).forEach(function(k){
-    body.append(k, params[k]!=null ? String(params[k]) : '');
-  });
-  return fetch(GAS_URL, {method:'POST', body:body})
+  var body = Object.assign({action:action}, params || {});
+  return fetch(GAS_URL, {
+    method: 'POST',
+    body: JSON.stringify(body)
+    // headers を一切指定しない（自動で text/plain になる）
+  })
     .then(function(r){return r.json();})
     .catch(function(e){toast('通信エラー: '+e,'er'); return null;});
 }
